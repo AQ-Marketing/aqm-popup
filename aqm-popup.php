@@ -3,7 +3,7 @@
 Plugin Name: AQM Popup
 Plugin URI: https://aqmarketing.com/
 Description: Site-wide popup for Divi 4 sites. Renders a Divi Library layout as the popup content, with configurable triggers (time delay, scroll depth, exit intent, click on element), per-session show cap, and post-dismissal cooldown.
-Version: 1.0.2
+Version: 1.0.3
 Author: AQ Marketing
 Author URI: https://aqmarketing.com/
 GitHub Plugin URI: https://github.com/AQ-Marketing/aqm-popup
@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'AQM_POPUP_VERSION', '1.0.2' );
+define( 'AQM_POPUP_VERSION', '1.0.3' );
 define( 'AQM_POPUP_FILE', __FILE__ );
 define( 'AQM_POPUP_PATH', plugin_dir_path( __FILE__ ) );
 define( 'AQM_POPUP_URL', plugin_dir_url( __FILE__ ) );
@@ -49,7 +49,6 @@ function aqm_popup_default_settings() {
         'cooldown_days'           => 7,
         'close_on_overlay_click'  => true,
         'close_on_esc'            => true,
-        'max_width_px'            => 600,
         'overlay_opacity'         => 0.7,
         'test_mode_enabled'       => false,
         'test_mode_page_id'       => 0,

@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.3 — 2026-05-21
+
+**Divi controls all popup styling.**
+
+- The plugin's `.aqm-popup-container` no longer has a background, border, border-radius, box-shadow, max-width, or padding of its own. The popup body is now whatever your Divi Library layout looks like, top to bottom.
+- Removed the **Popup max-width (px)** setting — size the popup via your Divi section's max-width instead (Section / Row settings → Sizing → Max Width).
+- The plugin still controls the dark **backdrop opacity**, the **close icon**, and the **test-mode chrome** (those are positioning concerns that Divi can't address).
+- Aria attributes tightened: dialog now uses `aria-label="Popup"` instead of a broken `aria-labelledby` pointer.
+
+**Breaking change** — if you previously set a popup max-width via the plugin, that value is now ignored. Re-apply the max-width via your Divi section settings.
+
 ## 1.0.2 — 2026-05-21
 
 - New **Test mode** section: pick a single page where the popup will appear persistently (no cooldown, no session cap), with the popup suppressed everywhere else while test mode is on.

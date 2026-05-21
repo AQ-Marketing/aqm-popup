@@ -114,8 +114,7 @@ class AQM_Popup_Admin {
 
         add_settings_field( 'close_on_overlay_click', __( 'Close on click outside', 'aqm-popup' ), array( $this, 'field_checkbox' ), self::PAGE_SLUG, 'aqm_popup_behavior', array( 'key' => 'close_on_overlay_click', 'description' => __( 'Clicking the dark overlay area dismisses the popup and starts the cooldown.', 'aqm-popup' ) ) );
         add_settings_field( 'close_on_esc',           __( 'Close on ESC key',       'aqm-popup' ), array( $this, 'field_checkbox' ), self::PAGE_SLUG, 'aqm_popup_behavior', array( 'key' => 'close_on_esc' ) );
-        add_settings_field( 'max_width_px',           __( 'Popup max-width (px)',   'aqm-popup' ), array( $this, 'field_number' ),   self::PAGE_SLUG, 'aqm_popup_behavior', array( 'key' => 'max_width_px', 'min' => 200, 'step' => 10 ) );
-        add_settings_field( 'overlay_opacity',        __( 'Overlay opacity',        'aqm-popup' ), array( $this, 'field_number' ),   self::PAGE_SLUG, 'aqm_popup_behavior', array( 'key' => 'overlay_opacity', 'min' => 0, 'max' => 1, 'step' => '0.05', 'description' => __( 'Between 0 (transparent) and 1 (opaque black).', 'aqm-popup' ) ) );
+        add_settings_field( 'overlay_opacity',        __( 'Overlay opacity',        'aqm-popup' ), array( $this, 'field_number' ),   self::PAGE_SLUG, 'aqm_popup_behavior', array( 'key' => 'overlay_opacity', 'min' => 0, 'max' => 1, 'step' => '0.05', 'description' => __( 'The dark backdrop behind the popup. Between 0 (transparent) and 1 (opaque black). The popup itself (background, padding, border-radius, etc.) is controlled by your Divi Library layout.', 'aqm-popup' ) ) );
 
         add_settings_section(
             'aqm_popup_test_mode',
@@ -129,7 +128,7 @@ class AQM_Popup_Admin {
     }
 
     public function section_general_text() {
-        echo '<p>' . esc_html__( 'Pick the Divi Library layout that will be rendered inside the popup.', 'aqm-popup' ) . '</p>';
+        echo '<p>' . esc_html__( 'Pick the Divi Library layout that will be rendered inside the popup. All visual styling — background, padding, margins, border, border-radius, max-width, typography — is controlled by your Divi layout. The plugin only handles the dark backdrop, the close button, and positioning.', 'aqm-popup' ) . '</p>';
     }
 
     public function section_triggers_text() {
@@ -344,7 +343,6 @@ class AQM_Popup_Admin {
         $out['close_on_overlay_click'] = ! empty( $input['close_on_overlay_click'] );
         $out['close_on_esc']           = ! empty( $input['close_on_esc'] );
 
-        $out['max_width_px']           = isset( $input['max_width_px'] ) ? max( 200, (int) $input['max_width_px'] ) : $defaults['max_width_px'];
         $out['overlay_opacity']        = isset( $input['overlay_opacity'] ) ? min( 1, max( 0, (float) $input['overlay_opacity'] ) ) : $defaults['overlay_opacity'];
 
         $out['test_mode_enabled']      = ! empty( $input['test_mode_enabled'] );

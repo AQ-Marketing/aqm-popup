@@ -51,10 +51,34 @@ Test mode is independent of the master **Enable popup** toggle, so you can previ
 
 - **Close on click outside** — clicking the dark overlay dismisses the popup (and starts the cooldown).
 - **Close on ESC key** — pressing ESC dismisses.
-- **Popup max-width (px)** — container max-width on desktop. Mobile is always full-width minus padding.
-- **Overlay opacity** — 0 (transparent) to 1 (opaque black).
+- **Overlay opacity** — the dark backdrop behind the popup, 0 (transparent) to 1 (opaque black).
 
 The close icon (X) in the top-right is always visible.
+
+## Styling the popup
+
+All visual properties of the popup body — **background, padding, margins, border, border-radius, max-width, box-shadow, typography** — come from your selected Divi Library layout. The plugin contributes nothing to the popup's appearance except the dark backdrop, the close icon, and (when active) the test-mode badge.
+
+In practice:
+
+- **Width** — set on your Divi section or row (Section settings → Design → Sizing → Max Width). The popup wraps to your section's width.
+- **Padding / margins** — use Divi's padding/margin controls on the section, row, or modules inside.
+- **Border + border-radius** — set on the section (Design → Border).
+- **Background** — set on the section's Content → Background.
+- **Shadow** — set on the section (Design → Box Shadow).
+- **Typography** — Divi modules carry their own typography settings.
+
+If you want the popup to look like a typical centered modal card, build your Divi layout with a single Section that has a white background, a border-radius (e.g. 8px), a soft box-shadow, internal padding (e.g. 40px), and a max-width (e.g. 600px). The plugin will center that section in the viewport with the dark backdrop behind it.
+
+### Overriding the plugin's chrome with custom CSS
+
+If you need to restyle the close icon or test-mode badge:
+
+```css
+/* in your Divi Theme Options → Custom CSS */
+.aqm-popup-close { background: rebeccapurple; }
+.aqm-popup-test-badge { display: none; }   /* hide the test-mode badge */
+```
 
 ## How it works
 
