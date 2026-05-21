@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.19 — 2026-05-21
+
+- **New Popup border + border-radius fields** in Behavior. Reliable border around the popup regardless of how Divi or Imagify mark up the inside.
+  - **Popup border** — CSS `border` shorthand string. Examples: `5px solid #ffffff`, `2px dashed #c10f30`, `10px solid rgba(255,255,255,0.5)`. Leave empty for no border.
+  - **Popup border radius (px)** — rounded corners on the popup container. When > 0, the container also gets `overflow: hidden` so the rendered image clips to the rounded corners.
+- Implemented via the same inline `<style id="aqm-popup-inline-style">` block as the close-icon styling (consolidated). Targets `#aqm-popup-container` (specificity 1,0,0) so it sits tight around the rendered Divi content regardless of where Divi or Imagify put their own border CSS.
+- **Why this exists:** with Imagify wrapping `<img>` in `<picture>` (and moving the `wp-image-XXX` class onto `<picture>`), Divi's per-module border CSS may miss the visible element entirely. Plus on Fullwidth Image modules with `width: auto` on the inner img (for aspect preservation), Divi's module-level border can land far from the visible image edge. Setting the border on the popup container sidesteps both problems.
+
 ## 1.0.18 — 2026-05-21
 
 - **New Close icon section** in the AQM Popup settings page. Style the X button without writing Custom CSS.

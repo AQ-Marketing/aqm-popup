@@ -135,6 +135,9 @@ class AQM_Popup_Admin {
             self::PAGE_SLUG
         );
 
+        add_settings_field( 'popup_border',           __( 'Popup border',              'aqm-popup' ), array( $this, 'field_text' ),   self::PAGE_SLUG, 'aqm_popup_behavior', array( 'key' => 'popup_border',          'placeholder' => 'e.g. 5px solid #ffffff', 'description' => __( 'CSS <code>border</code> shorthand applied to the popup container. Use this when a border set on the Divi image module doesn\'t show — e.g. with Imagify\'s <code>&lt;picture&gt;</code> wrapper, where Divi\'s per-module border CSS may miss the actual rendered element. Examples: <code>5px solid #ffffff</code>, <code>2px dashed #c10f30</code>, <code>10px solid rgba(255,255,255,0.5)</code>. Leave empty for no border.', 'aqm-popup' ) ) );
+        add_settings_field( 'popup_border_radius_px', __( 'Popup border radius (px)', 'aqm-popup' ), array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_behavior', array( 'key' => 'popup_border_radius_px', 'min' => 0, 'max' => 200, 'step' => 1, 'description' => __( 'Rounded corners on the popup container (and the border, if set above).', 'aqm-popup' ) ) );
+
         add_settings_field( 'close_size_px',          __( 'Button size (px)',         'aqm-popup' ), array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_close_icon', array( 'key' => 'close_size_px',         'min' => 16, 'max' => 200, 'step' => 1, 'description' => __( 'Width and height of the close button. The X icon scales proportionally (icon = button size × 0.5).', 'aqm-popup' ) ) );
         add_settings_field( 'close_offset_px',        __( 'Distance from corner (px)','aqm-popup' ), array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_close_icon', array( 'key' => 'close_offset_px',       'min' => 0,  'max' => 100, 'step' => 1, 'description' => __( 'How far from the popup\'s top-right corner the button sits.', 'aqm-popup' ) ) );
         add_settings_field( 'close_background',       __( 'Background',                'aqm-popup' ), array( $this, 'field_text' ),   self::PAGE_SLUG, 'aqm_popup_close_icon', array( 'key' => 'close_background',      'placeholder' => 'transparent', 'description' => __( 'Any valid CSS color. Examples: <code>transparent</code> (default — bare X with a drop-shadow halo), <code>rgba(0,0,0,0.55)</code> (translucent dark circle, the v1.0.0–v1.0.9 look), <code>#ffffff</code> (solid white), <code>#000</code>.', 'aqm-popup' ) ) );
@@ -400,6 +403,9 @@ class AQM_Popup_Admin {
 
         $out['overlay_padding_vertical']   = isset( $input['overlay_padding_vertical'] )   ? max( 0, (int) $input['overlay_padding_vertical'] )   : 0;
         $out['overlay_padding_horizontal'] = isset( $input['overlay_padding_horizontal'] ) ? max( 0, (int) $input['overlay_padding_horizontal'] ) : 0;
+
+        $out['popup_border']           = $this->sanitize_css_value( isset( $input['popup_border'] ) ? $input['popup_border'] : '' );
+        $out['popup_border_radius_px'] = isset( $input['popup_border_radius_px'] ) ? min( 200, max( 0, (int) $input['popup_border_radius_px'] ) ) : 0;
 
         $out['close_size_px']          = isset( $input['close_size_px'] )          ? min( 200, max( 16, (int) $input['close_size_px'] ) )        : $defaults['close_size_px'];
         $out['close_offset_px']        = isset( $input['close_offset_px'] )        ? min( 100, max( 0,  (int) $input['close_offset_px'] ) )      : $defaults['close_offset_px'];
