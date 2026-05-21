@@ -22,6 +22,7 @@ class AQM_Popup_Admin {
         add_action( 'admin_init', array( $this, 'register_settings' ) );
         add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
         add_filter( 'plugin_action_links_' . AQM_POPUP_BASENAME, array( $this, 'plugin_action_links' ) );
+        add_action( 'wp_ajax_aqm_popup_check_updates', array( $this, 'ajax_check_updates' ) );
     }
 
     public function register_menu() {
@@ -60,6 +61,14 @@ class AQM_Popup_Admin {
             AQM_POPUP_VERSION,
             true
         );
+        wp_localize_script( 'aqm-popup-admin', 'aqmPopupAdmin', array(
+            'ajaxUrl' => admin_url( 'admin-ajax.php' ),
+            'nonce'   => wp_create_nonce( 'aqm_popup_check_updates' ),
+            'i18n'    => array(
+                'checking' => __( 'Checking…', 'aqm-popup' ),
+                'failed'   => __( 'Check failed — see browser console for details.', 'aqm-popup' ),
+            ),
+        ) );
     }
 
     public function register_settings() {
@@ -372,8 +381,76 @@ class AQM_Popup_Admin {
                 submit_button();
                 ?>
             </form>
+
+            <hr style="margin:30px 0;" />
+
+            <h2><?php esc_html_e( 'Plugin updates', 'aqm-popup' ); ?></h2>
+            <p>
+                <button type="button" class="button button-secondary" id="aqm-popup-check-updates"><?php esc_html_e( 'Check for plugin updates now', 'aqm-popup' ); ?></button>
+                <span id="aqm-popup-check-updates-result" style="margin-left:12px;vertical-align:middle;"></span>
+            </p>
+            <p class="description"><?php
+                printf(
+                    /* translators: 1: current plugin version, 2: GitHub repo URL */
+                    esc_html__( 'Currently running version %1$s. Updates are pulled from %2$s and cached for 6 hours. Click the button above to force an immediate check.', 'aqm-popup' ),
+                    esc_html( AQM_POPUP_VERSION ),
+                    'github.com/' . esc_html( AQM_POPUP_GH_USER ) . '/' . esc_html( AQM_POPUP_GH_REPO )
+                );
+            ?></p>
         </div>
         <?php
+    }
+
+    public function ajax_check_updates() {
+        check_ajax_referer( 'aqm_popup_check_updates', 'nonce' );
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( array( 'message' => __( 'Insufficient permissions.', 'aqm-popup' ) ), 403 );
+        }
+
+        // Clear the plugin's own GitHub-data transient (6-hour cache used by AQM_Popup_Updater).
+        delete_transient( 'aqm_popup_github_data_' . md5( AQM_POPUP_GH_USER . AQM_POPUP_GH_REPO ) );
+
+        // Clear WordPress's own plugin-update transient and plugin cache so it re-polls.
+        delete_site_transient( 'update_plugins' );
+        wp_clean_plugins_cache( true );
+
+        if ( ! function_exists( 'wp_update_plugins' ) ) {
+            require_once ABSPATH . 'wp-admin/includes/update.php';
+        }
+        wp_update_plugins();
+
+        $transient        = get_site_transient( 'update_plugins' );
+        $current_version  = AQM_POPUP_VERSION;
+        $new_version      = null;
+
+        if ( $transient && isset( $transient->response[ AQM_POPUP_BASENAME ]->new_version ) ) {
+            $new_version = $transient->response[ AQM_POPUP_BASENAME ]->new_version;
+        }
+
+        if ( $new_version && version_compare( $new_version, $current_version, '>' ) ) {
+            wp_send_json_success( array(
+                'message' => sprintf(
+                    /* translators: 1: new version, 2: current version */
+                    __( 'Update available: v%1$s (you are on v%2$s). Go to Plugins → Installed Plugins to install.', 'aqm-popup' ),
+                    $new_version,
+                    $current_version
+                ),
+                'update_available' => true,
+                'new_version'      => $new_version,
+                'current_version'  => $current_version,
+                'updates_url'      => admin_url( 'plugins.php' ),
+            ) );
+        }
+
+        wp_send_json_success( array(
+            'message' => sprintf(
+                /* translators: %s: current plugin version */
+                __( 'You are running the latest version (v%s).', 'aqm-popup' ),
+                $current_version
+            ),
+            'update_available' => false,
+            'current_version'  => $current_version,
+        ) );
     }
 
     private function is_divi_active() {

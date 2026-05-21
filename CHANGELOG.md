@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.7 — 2026-05-21
+
+- New **Check for plugin updates now** button at the bottom of the AQM Popup settings page. Clears the plugin's 6-hour GitHub-data cache *and* WordPress's `update_plugins` site transient, then forces a fresh poll. The result (available version vs. current version) is displayed inline next to the button.
+- GitHub username and repo factored out to `AQM_POPUP_GH_USER` / `AQM_POPUP_GH_REPO` constants so the updater + the manual check share the same transient key.
+
 ## 1.0.6 — 2026-05-21
 
 - Removed the **Test mode** visual indicators (yellow badge + dashed outline). The popup now renders identically in test mode and production — what you preview is exactly what visitors will see.
