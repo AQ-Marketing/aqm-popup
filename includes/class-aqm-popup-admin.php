@@ -124,7 +124,9 @@ class AQM_Popup_Admin {
         add_settings_field( 'close_on_overlay_click', __( 'Close on click outside', 'aqm-popup' ), array( $this, 'field_checkbox' ), self::PAGE_SLUG, 'aqm_popup_behavior', array( 'key' => 'close_on_overlay_click', 'description' => __( 'Clicking the dark overlay area dismisses the popup and starts the cooldown.', 'aqm-popup' ) ) );
         add_settings_field( 'close_on_esc',           __( 'Close on ESC key',       'aqm-popup' ), array( $this, 'field_checkbox' ), self::PAGE_SLUG, 'aqm_popup_behavior', array( 'key' => 'close_on_esc' ) );
         add_settings_field( 'overlay_opacity',        __( 'Overlay opacity',        'aqm-popup' ), array( $this, 'field_number' ),   self::PAGE_SLUG, 'aqm_popup_behavior', array( 'key' => 'overlay_opacity', 'min' => 0, 'max' => 1, 'step' => '0.05', 'description' => __( 'The dark backdrop behind the popup. Between 0 (transparent) and 1 (opaque black). The popup itself (background, padding, border-radius, etc.) is controlled by your Divi Library layout.', 'aqm-popup' ) ) );
-        add_settings_field( 'edge_to_edge_mode',      __( 'Edge-to-edge content',   'aqm-popup' ), array( $this, 'field_checkbox' ), self::PAGE_SLUG, 'aqm_popup_behavior', array( 'key' => 'edge_to_edge_mode', 'description' => __( 'Override Divi defaults inside the popup: row padding (27px) → 0, row width (80%) → 100%, column padding → 0, image-module bottom margin → 0. Section padding is NOT touched — control that fully via Divi UI (Section → Design → Spacing → Padding). Set section padding to 0 in Divi for a true edge-to-edge image; set it to anything else for a padded card look.', 'aqm-popup' ) ) );
+        add_settings_field( 'edge_to_edge_mode',      __( 'Edge-to-edge content',   'aqm-popup' ), array( $this, 'field_checkbox' ), self::PAGE_SLUG, 'aqm_popup_behavior', array( 'key' => 'edge_to_edge_mode', 'description' => __( 'Override Divi defaults inside the popup: row padding (27px) → 0, row width (80%) → 100%, column padding → 0, image-module bottom margin → 0. Section padding is NOT touched — control that fully via Divi UI (Section → Design → Spacing → Padding), or via the Section padding fields below.', 'aqm-popup' ) ) );
+        add_settings_field( 'section_padding_vertical',   __( 'Section padding — top/bottom (px)',   'aqm-popup' ), array( $this, 'field_number' ),   self::PAGE_SLUG, 'aqm_popup_behavior', array( 'key' => 'section_padding_vertical',   'min' => 0, 'step' => 1, 'description' => __( 'Force vertical padding inside every Divi section in the popup. Use this when Divi UI section padding doesn\'t apply — most commonly with a Fullwidth Section, where Divi\'s theme CSS locks padding to 0 and the section settings panel in Divi Builder is essentially non-functional for padding. Leave at 0 to let Divi UI control padding.', 'aqm-popup' ) ) );
+        add_settings_field( 'section_padding_horizontal', __( 'Section padding — left/right (px)',   'aqm-popup' ), array( $this, 'field_number' ),   self::PAGE_SLUG, 'aqm_popup_behavior', array( 'key' => 'section_padding_horizontal', 'min' => 0, 'step' => 1, 'description' => __( 'Force horizontal padding inside every Divi section in the popup. Same rationale as the vertical field above.', 'aqm-popup' ) ) );
 
         add_settings_section(
             'aqm_popup_test_mode',
@@ -361,6 +363,9 @@ class AQM_Popup_Admin {
 
         $out['overlay_opacity']        = isset( $input['overlay_opacity'] ) ? min( 1, max( 0, (float) $input['overlay_opacity'] ) ) : $defaults['overlay_opacity'];
         $out['edge_to_edge_mode']      = ! empty( $input['edge_to_edge_mode'] );
+
+        $out['section_padding_vertical']   = isset( $input['section_padding_vertical'] )   ? max( 0, (int) $input['section_padding_vertical'] )   : 0;
+        $out['section_padding_horizontal'] = isset( $input['section_padding_horizontal'] ) ? max( 0, (int) $input['section_padding_horizontal'] ) : 0;
 
         $out['test_mode_enabled']      = ! empty( $input['test_mode_enabled'] );
         $out['test_mode_page_id']      = isset( $input['test_mode_page_id'] ) ? max( 0, (int) $input['test_mode_page_id'] ) : 0;

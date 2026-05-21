@@ -121,6 +121,23 @@ class AQM_Popup_Display {
         if ( ! empty( $settings['edge_to_edge_mode'] ) ) {
             $overlay_classes[] = 'aqm-popup-edge-to-edge';
         }
+
+        // User-configured section padding: emit a high-specificity !important
+        // rule scoped to the popup. This intentionally beats Divi's base
+        // `.et_pb_section.et_pb_fullwidth_section { padding: 0 }` lock,
+        // because Divi UI's own padding control is non-functional for
+        // Fullwidth Sections (the most common reason a user reaches for
+        // this setting).
+        $v = max( 0, (int) $settings['section_padding_vertical'] );
+        $h = max( 0, (int) $settings['section_padding_horizontal'] );
+        if ( $v > 0 || $h > 0 ) {
+            $css = sprintf(
+                '#aqm-popup-content .et_pb_section{padding:%dpx %dpx !important}',
+                $v,
+                $h
+            );
+            echo '<style id="aqm-popup-section-padding">' . $css . '</style>'; // phpcs:ignore WordPress.Security.EscapeOutput
+        }
         ?>
         <div id="aqm-popup-overlay" class="<?php echo esc_attr( implode( ' ', $overlay_classes ) ); ?>" hidden role="dialog" aria-modal="true" aria-label="<?php esc_attr_e( 'Popup', 'aqm-popup' ); ?>" style="<?php echo esc_attr( $style_overlay ); ?>">
             <div id="aqm-popup-container" class="aqm-popup-container">

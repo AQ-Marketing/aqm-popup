@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.14 — 2026-05-21
+
+- **New Section padding fields** under Behavior — top/bottom (px) and left/right (px). Forces padding on every Divi section inside the popup, with `!important` specificity, scoped to `#aqm-popup-content .et_pb_section`. Bypasses Divi's lock that prevents the Divi-UI padding control from working on **Fullwidth Sections** (`.et_pb_fullwidth_section { padding: 0 }` in Divi's base CSS).
+- The padding is applied to the **Divi section element itself**, NOT the overlay — your section's background, border, and other section-level styling still cover the padding area.
+- Leave at 0 to let Divi UI control section padding (the v1.0.12 behavior — perfect when using a Regular Section).
+
 ## 1.0.13 — 2026-05-21
 
 **Stop interfering with Divi's image sizing.**
