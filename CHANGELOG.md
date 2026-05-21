@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.11 — 2026-05-21
+
+- **No scrollbars in the popup.** Overlay and container now use `overflow: hidden` instead of `overflow-y: auto`. Images, `<picture>`, and `<video>` elements inside the popup scale to fit the viewport via `max-height: 100vh` + `object-fit: contain`, so tall media no longer triggers a scrollbar — it just shrinks. Text-heavy content that exceeds the viewport will clip rather than scroll, so design your popup layouts to fit.
+- **Divi UI overrides now win in edge-to-edge mode.** The edge-to-edge mode's CSS selectors are now wrapped in `:where()`, which keeps their specificity at `0,1,0` — tied with Divi's per-section/per-row generated CSS. Divi prints its per-element rules after our stylesheet, so anything you set explicitly in Divi UI (Section → Design → Spacing → Padding, Row width via Custom Width, etc.) wins over the plugin's reset. Practical upshot: turn edge-to-edge mode on for a sensible flush default, and add padding back per-layout in Divi when you want it.
+
 ## 1.0.10 — 2026-05-21
 
 - **Edge-to-edge content** now also forces Divi rows to `width: 100%` (Divi default is 80%). This was the main cause of "image still has a white strip on either side after enabling edge-to-edge mode" — the row width default was leaving 10% empty on each side.
