@@ -102,7 +102,8 @@ body.aqm-popup-open {
  * so the user has no way to zero out any spacing they impose. Reset to 0.
  *
  * NOTE: Sections, rows, columns, and modules are user-controlled via Divi
- * Builder — we deliberately do NOT touch those.
+ * Builder — we deliberately do NOT touch those by default. See
+ * .aqm-popup-edge-to-edge below for the opt-in override.
  */
 #aqm-popup-content > .et-l,
 #aqm-popup-content > .et-l > .et_builder_inner_content,
@@ -111,6 +112,24 @@ body.aqm-popup-open {
     padding: 0;
     margin: 0;
     background: transparent;
+}
+
+/*
+ * Edge-to-edge content mode (opt-in via "Behavior → Edge-to-edge content" in admin).
+ * Overrides Divi's default section/row padding and image-module bottom margin
+ * inside the popup so content sits flush against the popup edges. The selector
+ * specificity (0,2,0) beats Divi's base .et_pb_section rule (0,1,0); user-set
+ * per-section padding in Divi UI is typically generated with equal or higher
+ * specificity, so explicit per-section settings still take effect on top of
+ * this reset.
+ */
+.aqm-popup-edge-to-edge .et_pb_section,
+.aqm-popup-edge-to-edge .et_pb_row,
+.aqm-popup-edge-to-edge .et_pb_column {
+    padding: 0;
+}
+.aqm-popup-edge-to-edge .et_pb_module {
+    margin-bottom: 0;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -116,8 +116,13 @@ class AQM_Popup_Display {
 
         $opacity       = min( 1, max( 0, (float) $settings['overlay_opacity'] ) );
         $style_overlay = sprintf( 'background-color: rgba(0,0,0,%s);', esc_attr( (string) $opacity ) );
+
+        $overlay_classes = array( 'aqm-popup-overlay' );
+        if ( ! empty( $settings['edge_to_edge_mode'] ) ) {
+            $overlay_classes[] = 'aqm-popup-edge-to-edge';
+        }
         ?>
-        <div id="aqm-popup-overlay" class="aqm-popup-overlay" hidden role="dialog" aria-modal="true" aria-label="<?php esc_attr_e( 'Popup', 'aqm-popup' ); ?>" style="<?php echo esc_attr( $style_overlay ); ?>">
+        <div id="aqm-popup-overlay" class="<?php echo esc_attr( implode( ' ', $overlay_classes ) ); ?>" hidden role="dialog" aria-modal="true" aria-label="<?php esc_attr_e( 'Popup', 'aqm-popup' ); ?>" style="<?php echo esc_attr( $style_overlay ); ?>">
             <div id="aqm-popup-container" class="aqm-popup-container">
                 <button type="button" id="aqm-popup-close" class="aqm-popup-close" aria-label="<?php esc_attr_e( 'Close', 'aqm-popup' ); ?>">
                     <svg class="aqm-popup-close-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false">

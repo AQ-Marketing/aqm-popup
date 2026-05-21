@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.9 — 2026-05-21
+
+- New **Edge-to-edge content** setting in **Behavior**. When on, the plugin zeroes out Divi's default section padding (4% top/bottom), row padding (27px top/bottom), and image-module bottom margin inside the popup. Use it for popups that should be a single edge-to-edge image or full-bleed content without having to manually zero those values on every Library layout.
+- Default is OFF — Divi defaults apply, just like before. Per-section padding/margin you explicitly set in the Divi UI continues to take effect (Divi generates per-section CSS at equal or higher specificity, so it wins over this reset).
+- Only affects rendering inside `#aqm-popup-overlay.aqm-popup-edge-to-edge` — the rest of the site is untouched.
+
 ## 1.0.8 — 2026-05-21
 
 - Reset Divi's auto-generated layout wrappers (`.et-l`, `.et_builder_inner_content`) to zero padding/margin/background inside the popup. These wrappers are injected by Divi when a Library layout is rendered via `apply_filters('the_content', …)` and can't be reached from the Divi UI, so the user otherwise has no way to zero out any spacing they impose.
