@@ -23,16 +23,31 @@ class AQM_Popup_Display {
             return false;
         }
         $settings = aqm_popup_get_settings();
-        if ( empty( $settings['enabled'] ) ) {
-            return false;
-        }
+
         if ( empty( $settings['layout_id'] ) ) {
             return false;
         }
         if ( ! $this->has_any_trigger_enabled( $settings ) ) {
             return false;
         }
+
+        if ( ! empty( $settings['test_mode_enabled'] ) ) {
+            $test_page = (int) $settings['test_mode_page_id'];
+            if ( $test_page <= 0 ) {
+                return false;
+            }
+            return is_page( $test_page );
+        }
+
+        if ( empty( $settings['enabled'] ) ) {
+            return false;
+        }
         return true;
+    }
+
+    private function is_test_mode_active() {
+        $settings = aqm_popup_get_settings();
+        return ! empty( $settings['test_mode_enabled'] ) && (int) $settings['test_mode_page_id'] > 0;
     }
 
     private function has_any_trigger_enabled( $settings ) {
@@ -79,6 +94,7 @@ class AQM_Popup_Display {
                 'closeOnOverlayClick' => ! empty( $settings['close_on_overlay_click'] ),
                 'closeOnEsc'          => ! empty( $settings['close_on_esc'] ),
             ),
+            'testMode' => $this->is_test_mode_active(),
         ) );
     }
 
@@ -103,9 +119,13 @@ class AQM_Popup_Display {
 
         $style_overlay   = sprintf( 'background-color: rgba(0,0,0,%s);', esc_attr( (string) $opacity ) );
         $style_container = sprintf( 'max-width: %dpx;', $max_width );
+        $test_mode       = $this->is_test_mode_active();
         ?>
-        <div id="aqm-popup-overlay" class="aqm-popup-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="aqm-popup-content" style="<?php echo esc_attr( $style_overlay ); ?>">
+        <div id="aqm-popup-overlay" class="aqm-popup-overlay<?php echo $test_mode ? ' is-test-mode' : ''; ?>" hidden role="dialog" aria-modal="true" aria-labelledby="aqm-popup-content" style="<?php echo esc_attr( $style_overlay ); ?>">
             <div id="aqm-popup-container" class="aqm-popup-container" style="<?php echo esc_attr( $style_container ); ?>">
+                <?php if ( $test_mode ) : ?>
+                    <div class="aqm-popup-test-badge" aria-hidden="true"><?php esc_html_e( 'Test mode', 'aqm-popup' ); ?></div>
+                <?php endif; ?>
                 <button type="button" id="aqm-popup-close" class="aqm-popup-close" aria-label="<?php esc_attr_e( 'Close', 'aqm-popup' ); ?>">
                     <svg class="aqm-popup-close-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false">
                         <path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" d="M6 6 L18 18 M18 6 L6 18"/>

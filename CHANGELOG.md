@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.2 — 2026-05-21
+
+- New **Test mode** section: pick a single page where the popup will appear persistently (no cooldown, no session cap), with the popup suppressed everywhere else while test mode is on.
+- Page picker lists drafts as well as published pages, so popups can be previewed privately.
+- Yellow **Test mode** badge + dashed outline on the popup container while test mode is active, so it's obvious the live site isn't seeing this.
+- Test mode is independent of the master **Enable popup** toggle — you can preview before going live, or test changes without disturbing production.
+
 ## 1.0.1 — 2026-05-21
 
 - Settings live under their own top-level admin menu (**AQM Popup**) instead of nested under Settings.

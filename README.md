@@ -38,6 +38,15 @@ Enable any combination. The popup appears as soon as the **first** enabled trigg
 - **Max shows per session** — how many times the popup can appear in a single browser session. Resets when the tab closes.
 - **Cooldown after dismissal (days)** — once dismissed, the popup is suppressed for this many days. Stored in `localStorage`, so it persists across sessions. Set to `0` to disable the cooldown.
 
+### Test mode
+
+For previewing the popup without going live to your visitors:
+
+- **Enable test mode** — when on, the popup shows **only** on the selected test page below, and ignores all frequency caps. It does **not** show on any other page.
+- **Test page** — pick a page. The dropdown includes drafts (so you can test on a private page that only logged-in editors can see).
+
+Test mode is independent of the master **Enable popup** toggle, so you can preview before going live or test new triggers without affecting your production popup. While test mode is active, the popup displays a yellow **Test mode** badge and a dashed outline so it's obvious the live site isn't seeing this version.
+
 ### Behavior
 
 - **Close on click outside** — clicking the dark overlay dismisses the popup (and starts the cooldown).

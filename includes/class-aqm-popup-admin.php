@@ -116,6 +116,16 @@ class AQM_Popup_Admin {
         add_settings_field( 'close_on_esc',           __( 'Close on ESC key',       'aqm-popup' ), array( $this, 'field_checkbox' ), self::PAGE_SLUG, 'aqm_popup_behavior', array( 'key' => 'close_on_esc' ) );
         add_settings_field( 'max_width_px',           __( 'Popup max-width (px)',   'aqm-popup' ), array( $this, 'field_number' ),   self::PAGE_SLUG, 'aqm_popup_behavior', array( 'key' => 'max_width_px', 'min' => 200, 'step' => 10 ) );
         add_settings_field( 'overlay_opacity',        __( 'Overlay opacity',        'aqm-popup' ), array( $this, 'field_number' ),   self::PAGE_SLUG, 'aqm_popup_behavior', array( 'key' => 'overlay_opacity', 'min' => 0, 'max' => 1, 'step' => '0.05', 'description' => __( 'Between 0 (transparent) and 1 (opaque black).', 'aqm-popup' ) ) );
+
+        add_settings_section(
+            'aqm_popup_test_mode',
+            __( 'Test mode', 'aqm-popup' ),
+            array( $this, 'section_test_mode_text' ),
+            self::PAGE_SLUG
+        );
+
+        add_settings_field( 'test_mode_enabled', __( 'Enable test mode', 'aqm-popup' ), array( $this, 'field_checkbox' ),       self::PAGE_SLUG, 'aqm_popup_test_mode', array( 'key' => 'test_mode_enabled', 'description' => __( 'While test mode is on, the popup appears only on the selected page below and ignores frequency caps (cooldown + per-session limit). All other pages will not show the popup.', 'aqm-popup' ) ) );
+        add_settings_field( 'test_mode_page_id', __( 'Test page',        'aqm-popup' ), array( $this, 'field_test_mode_page' ), self::PAGE_SLUG, 'aqm_popup_test_mode' );
     }
 
     public function section_general_text() {
@@ -128,6 +138,10 @@ class AQM_Popup_Admin {
 
     public function section_frequency_text() {
         echo '<p>' . esc_html__( 'Control how often the popup shows. Per-session count resets when the browser tab closes; cooldown persists across sessions.', 'aqm-popup' ) . '</p>';
+    }
+
+    public function section_test_mode_text() {
+        echo '<p>' . esc_html__( 'Preview the popup on a single page without affecting the live site. While test mode is on, the popup shows on every page load on the selected page (no cooldown, no session cap), and it does not show anywhere else.', 'aqm-popup' ) . '</p>';
     }
 
     public function field_checkbox( $args ) {
@@ -248,6 +262,43 @@ class AQM_Popup_Admin {
         <?php
     }
 
+    public function field_test_mode_page() {
+        $settings = aqm_popup_get_settings();
+        $current  = (int) $settings['test_mode_page_id'];
+        $pages    = get_posts( array(
+            'post_type'      => 'page',
+            'posts_per_page' => -1,
+            'orderby'        => 'title',
+            'order'          => 'ASC',
+            'post_status'    => array( 'publish', 'private', 'draft', 'pending' ),
+        ) );
+
+        echo '<select name="' . esc_attr( self::OPTION_KEY ) . '[test_mode_page_id]">';
+        echo '<option value="0">' . esc_html__( '— Select a page —', 'aqm-popup' ) . '</option>';
+        foreach ( $pages as $page ) {
+            $title = $page->post_title ? $page->post_title : sprintf( '(no title — #%d)', $page->ID );
+            if ( 'publish' !== $page->post_status ) {
+                $title .= ' (' . $page->post_status . ')';
+            }
+            printf(
+                '<option value="%1$d" %2$s>%3$s</option>',
+                (int) $page->ID,
+                selected( $current, (int) $page->ID, false ),
+                esc_html( $title )
+            );
+        }
+        echo '</select>';
+
+        if ( $current ) {
+            $url = get_permalink( $current );
+            if ( $url ) {
+                echo ' <a href="' . esc_url( $url ) . '" target="_blank" rel="noopener" class="button">' . esc_html__( 'Open test page ↗', 'aqm-popup' ) . '</a>';
+            }
+        }
+
+        echo '<p class="description">' . esc_html__( 'Drafts are included so you can test in private — only logged-in users with edit access can view a draft page.', 'aqm-popup' ) . '</p>';
+    }
+
     public function field_trigger_click() {
         $settings = aqm_popup_get_settings();
         ?>
@@ -295,6 +346,9 @@ class AQM_Popup_Admin {
 
         $out['max_width_px']           = isset( $input['max_width_px'] ) ? max( 200, (int) $input['max_width_px'] ) : $defaults['max_width_px'];
         $out['overlay_opacity']        = isset( $input['overlay_opacity'] ) ? min( 1, max( 0, (float) $input['overlay_opacity'] ) ) : $defaults['overlay_opacity'];
+
+        $out['test_mode_enabled']      = ! empty( $input['test_mode_enabled'] );
+        $out['test_mode_page_id']      = isset( $input['test_mode_page_id'] ) ? max( 0, (int) $input['test_mode_page_id'] ) : 0;
 
         return $out;
     }

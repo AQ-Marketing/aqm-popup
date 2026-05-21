@@ -62,9 +62,12 @@
         var freq = settings.frequency || { maxPerSession: 1, cooldownDays: 7 };
         var behavior = settings.behavior || { closeOnOverlayClick: true, closeOnEsc: true };
         var triggers = settings.triggers || {};
+        var testMode = settings.testMode === true;
 
-        if (isInCooldown(freq.cooldownDays)) return;
-        if (getShownCount() >= freq.maxPerSession) return;
+        if (!testMode) {
+            if (isInCooldown(freq.cooldownDays)) return;
+            if (getShownCount() >= freq.maxPerSession) return;
+        }
 
         var teardownFns = [];
         var isOpen = false;
@@ -79,7 +82,7 @@
 
         function showPopup() {
             if (isOpen || firedOnce) return;
-            if (isInCooldown(freq.cooldownDays)) {
+            if (!testMode && isInCooldown(freq.cooldownDays)) {
                 teardownAllTriggers();
                 return;
             }
@@ -92,28 +95,32 @@
             overlay.classList.add('is-open');
             document.body.classList.add('aqm-popup-open');
 
-            var newCount = getShownCount() + 1;
-            setShownCount(newCount);
+            if (!testMode) {
+                var newCount = getShownCount() + 1;
+                setShownCount(newCount);
+                if (newCount >= freq.maxPerSession) {
+                    teardownAllTriggers();
+                }
+            }
 
             // focus management for accessibility
             try { closeBtn.focus({ preventScroll: true }); } catch (e) { closeBtn.focus(); }
-
-            if (newCount >= freq.maxPerSession) {
-                teardownAllTriggers();
-            }
         }
 
         function dismissPopup() {
             if (!isOpen) return;
             isOpen = false;
+            firedOnce = false; // re-arm in test mode so subsequent triggers still fire on this page load
             overlay.classList.remove('is-open');
             document.body.classList.remove('aqm-popup-open');
             // hide after transition
             window.setTimeout(function () {
                 if (!isOpen) overlay.hidden = true;
             }, 220);
-            safeSetLocal(STORAGE.DISMISSED_AT, String(Date.now()));
-            teardownAllTriggers();
+            if (!testMode) {
+                safeSetLocal(STORAGE.DISMISSED_AT, String(Date.now()));
+                teardownAllTriggers();
+            }
         }
 
         // ----- dismiss handlers -----
