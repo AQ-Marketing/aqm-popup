@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.12 — 2026-05-21
+
+**Hotfix.** v1.0.11's `:where()` change to make Divi UI overrides win in edge-to-edge mode dropped selector specificity to `0,1,0`, which lost the cascade battle against Divi's `.et_pb_row.et_pb_equal_columns` rule (specificity `0,2,0`). The row's default 80% width came back, putting ~10% of empty section on each side of edge-to-edge content — visible as a ~100px white border.
+
+- **Reverted to direct selectors** (specificity `0,2,0`) for row/column/module so they reliably beat Divi's compound base rules.
+- **Removed section padding from the edge-to-edge reset.** Section padding is now purely controlled by **Divi UI** (Section → Design → Spacing → Padding). Set it to 0 for a true edge-to-edge image, or any value (e.g., 40px) for a card-style popup with breathing room. This is more honest to the "Divi controls all popup styling" principle and avoids the specificity battle entirely for the one element users most commonly want to tune.
+- **Kept** the v1.0.11 no-scrollbar + image-scaling fixes (those were not the problem).
+
 ## 1.0.11 — 2026-05-21
 
 - **No scrollbars in the popup.** Overlay and container now use `overflow: hidden` instead of `overflow-y: auto`. Images, `<picture>`, and `<video>` elements inside the popup scale to fit the viewport via `max-height: 100vh` + `object-fit: contain`, so tall media no longer triggers a scrollbar — it just shrinks. Text-heavy content that exceeds the viewport will clip rather than scroll, so design your popup layouts to fit.
