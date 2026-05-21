@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.0.5 — 2026-05-21
+
+- **Click trigger** now listens in **capture phase** on the document, so clicks are caught before any module (Divi or otherwise) can call `event.stopPropagation()` to swallow them. This is the most common reason a click trigger silently fails on Divi pages.
+- **Console diagnostics in test mode.** While test mode is on, the plugin logs to the browser DevTools console (F12 → Console):
+  - Init line with the configured triggers, frequency, and test-mode state.
+  - Validation of the click selector at page load (how many elements currently match, or a warning if the selector is invalid CSS).
+  - Every click event seen by the document, with the target element and whether it matched the configured selector.
+  - When the popup shows or when a `showPopup()` call is skipped because it already fired.
+- Updated the click-trigger admin help to spell out the DevTools debugging workflow.
+
+The live site stays silent — these logs only emit when **test mode** is enabled.
+
 ## 1.0.4 — 2026-05-21
 
 - **Test mode** now re-arms the time-delay trigger after dismissal, so the popup can be opened as many times as you need on the same page load (previously, after dismissing once, only scroll/exit/click triggers could re-fire — delay was one-shot per page load).

@@ -64,6 +64,22 @@
         var triggers = settings.triggers || {};
         var testMode = settings.testMode === true;
 
+        // Console diagnostics — only emit when test mode is active so the live site stays quiet.
+        function log() {
+            if (!testMode || !window.console || !window.console.log) return;
+            var args = ['[AQM Popup]'];
+            for (var i = 0; i < arguments.length; i++) args.push(arguments[i]);
+            try { window.console.log.apply(window.console, args); } catch (e) { /* ignore */ }
+        }
+        function logWarn() {
+            if (!testMode || !window.console || !window.console.warn) return;
+            var args = ['[AQM Popup]'];
+            for (var i = 0; i < arguments.length; i++) args.push(arguments[i]);
+            try { window.console.warn.apply(window.console, args); } catch (e) { /* ignore */ }
+        }
+
+        log('Initialized. testMode=', testMode, 'triggers=', triggers, 'frequency=', freq);
+
         if (!testMode) {
             if (isInCooldown(freq.cooldownDays)) return;
             if (getShownCount() >= freq.maxPerSession) return;
@@ -88,11 +104,15 @@
         }
 
         function showPopup() {
-            if (isOpen || firedOnce) return;
+            if (isOpen || firedOnce) {
+                log('showPopup() called but already open/fired this cycle — ignored.');
+                return;
+            }
             if (!testMode && isInCooldown(freq.cooldownDays)) {
                 teardownAllTriggers();
                 return;
             }
+            log('Showing popup.');
             firedOnce = true;
             isOpen = true;
 
@@ -203,24 +223,44 @@
 
         if (triggers.click && typeof triggers.click.selector === 'string' && triggers.click.selector.trim() !== '') {
             var selector = triggers.click.selector.trim();
+
+            // Validate the selector once and report how many elements currently match.
+            try {
+                var initialMatches = document.querySelectorAll(selector);
+                log('Click trigger registered with selector', JSON.stringify(selector),
+                    '— currently matches', initialMatches.length, 'element(s) on the page.');
+                if (initialMatches.length === 0) {
+                    logWarn('Selector matched 0 elements at page load. The trigger element may be added later — that\'s fine — but double-check the selector against your HTML. Try `document.querySelectorAll(' + JSON.stringify(selector) + ')` in this console.');
+                }
+            } catch (err) {
+                logWarn('Click selector', JSON.stringify(selector), 'is not valid CSS:', err && err.message ? err.message : err);
+            }
+
             var onClick = function (e) {
                 var target = e.target && e.target.nodeType === 1 ? e.target : null;
                 if (!target) return;
+
                 var matched = null;
                 try {
                     matched = target.closest(selector);
                 } catch (err) {
-                    // invalid selector — bail silently
+                    // invalid selector — bail silently in production, warn in test mode (once was enough above).
                     return;
                 }
+                // Diagnostic: log click events while debugging.
+                log('Click event — target:', target, 'matched selector?', !!matched);
+
                 if (!matched) return;
                 // Don't intercept clicks happening inside the popup itself.
                 if (overlay.contains(matched)) return;
                 if (matched.tagName === 'A') e.preventDefault();
                 showPopup();
             };
-            document.addEventListener('click', onClick);
-            teardownFns.push(function () { document.removeEventListener('click', onClick); });
+            // Use capture phase so the click is intercepted at the document root,
+            // BEFORE any element along the bubble path can call stopPropagation().
+            // Divi modules sometimes do this — capture phase is immune.
+            document.addEventListener('click', onClick, true);
+            teardownFns.push(function () { document.removeEventListener('click', onClick, true); });
         }
     });
 })();

@@ -316,6 +316,7 @@ class AQM_Popup_Admin {
                 <input type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[trigger_click_selector]" value="<?php echo esc_attr( $settings['trigger_click_selector'] ); ?>" class="regular-text" placeholder=".open-popup, #cta-button" />
             </label>
             <p class="description"><?php esc_html_e( 'Any standard CSS selector. Clicks on matching elements (including nested children) open the popup. If the element is a link, the default navigation is prevented.', 'aqm-popup' ); ?></p>
+            <p class="description"><?php echo wp_kses_post( __( '<strong>Not firing?</strong> While test mode is on, AQM Popup logs every click event to your browser DevTools console (F12 → Console). Click your trigger element — if the log shows <code>matched selector? false</code>, the selector doesn\'t match the button you clicked. Verify it by running <code>document.querySelectorAll(\'your-selector\')</code> in the console — it should return at least one element.', 'aqm-popup' ) ); ?></p>
         </div>
         <?php
     }
