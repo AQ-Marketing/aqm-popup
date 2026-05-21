@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.17 — 2026-05-21
+
+- **Divi borders + box-shadows on images now render in the popup.** Plain CSS borders were already working (the plugin doesn't touch `border` anywhere), but the popup container had `overflow: hidden` carried over from the v1.0.11 no-scrollbar work, which clipped `box-shadow`, `outline`, and any decorative pseudo-elements that render outside the box. Container is now `overflow: visible`.
+- The image itself can't overflow because the v1.0.16 `max-width`/`max-height` constraints still apply to the image directly. The overlay's own `overflow: hidden` still catches anything that extends beyond the viewport, so the no-scrollbar guarantee is intact.
+- **Niche side effect:** if your popup content is a tall text block (not an image) that exceeds the available height, it will now overflow the container visibly rather than being clipped. For text-heavy popups, design content that fits, or override `.aqm-popup-container { overflow: hidden }` in Custom CSS.
+
 ## 1.0.16 — 2026-05-21
 
 - **Image fits within the viewport — no bottom clipping.** Reintroduces aspect-preserving image scaling: `max-width` + `max-height` + `width: auto` + `height: auto` on images/videos inside the popup so tall content scales down to fit instead of being clipped by the overlay's `overflow: hidden`.
