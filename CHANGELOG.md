@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.8 — 2026-05-21
+
+- Reset Divi's auto-generated layout wrappers (`.et-l`, `.et_builder_inner_content`) to zero padding/margin/background inside the popup. These wrappers are injected by Divi when a Library layout is rendered via `apply_filters('the_content', …)` and can't be reached from the Divi UI, so the user otherwise has no way to zero out any spacing they impose.
+- Sections, rows, columns, and modules are still 100% user-controlled via Divi Builder — those are not touched.
+
 ## 1.0.7 — 2026-05-21
 
 - New **Check for plugin updates now** button at the bottom of the AQM Popup settings page. Clears the plugin's 6-hour GitHub-data cache *and* WordPress's `update_plugins` site transient, then forces a fresh poll. The result (available version vs. current version) is displayed inline next to the button.
