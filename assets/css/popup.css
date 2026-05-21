@@ -45,17 +45,22 @@
 }
 
 /*
- * Scale images / pictures / videos inside the popup so they fit the viewport
- * without ever causing a scrollbar. `object-fit: contain` preserves aspect.
+ * Standard responsive max-width on media inside the popup — nothing else.
+ * The plugin deliberately does NOT set width/height/max-height/object-fit
+ * here. v1.0.11 tried `width: auto + max-height: 100vh` to "fit to viewport"
+ * but that override broke Divi's own image sizing — most visibly on
+ * Fullwidth Image modules (`.et_pb_fullwidth_image img { width: 100% }`)
+ * which then rendered at their natural intrinsic size instead of filling
+ * the container. From v1.0.13 onward Divi controls all image sizing.
+ *
+ * Trade-off: with overlay + container at `overflow: hidden` + `max-height:
+ * 100vh`, any content that exceeds the viewport (e.g., a very tall image
+ * scaled up by `.et_pb_fullwidth_image img { width: 100% }`) will clip at
+ * the bottom rather than show a scrollbar. Design popup content that fits.
  */
 #aqm-popup-content img,
-#aqm-popup-content picture,
 #aqm-popup-content video {
     max-width: 100%;
-    max-height: 100vh;
-    width: auto;
-    height: auto;
-    object-fit: contain;
 }
 
 .aqm-popup-overlay.is-open .aqm-popup-container {

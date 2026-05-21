@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.13 — 2026-05-21
+
+**Stop interfering with Divi's image sizing.**
+
+v1.0.11 added image-scaling rules (`width: auto`, `height: auto`, `max-height: 100vh`, `object-fit: contain` on `<img>`, `<picture>`, `<video>`) to satisfy the no-scrollbar request. Side effect: `width: auto` overrides Divi's own `.et_pb_fullwidth_image img { width: 100% }` rule, so Fullwidth Image modules rendered at their natural intrinsic size instead of filling the popup container. Users perceived this as "Divi styles aren't working" — section padding looked ignored because the image was visibly smaller than the container.
+
+- **Removed `width: auto`, `height: auto`, `max-height`, and `object-fit` from the image rules.** Divi now controls image sizing fully — Fullwidth Image modules fill their container, regular image modules render at their configured Divi size, and section/row padding visibly affects image position.
+- **Kept** `#aqm-popup-content img, video { max-width: 100% }` as a standard responsive guard against horizontal overflow.
+- **Trade-off:** the overlay + container still use `overflow: hidden` + `max-height: 100vh` (per v1.0.11's no-scrollbar request), so content taller than the viewport clips at the bottom. Design popup content that fits the viewport — or override `.aqm-popup-container { overflow: auto }` in Divi Custom CSS if you want scrolling back.
+
 ## 1.0.12 — 2026-05-21
 
 **Hotfix.** v1.0.11's `:where()` change to make Divi UI overrides win in edge-to-edge mode dropped selector specificity to `0,1,0`, which lost the cascade battle against Divi's `.et_pb_row.et_pb_equal_columns` rule (specificity `0,2,0`). The row's default 80% width came back, putting ~10% of empty section on each side of edge-to-edge content — visible as a ~100px white border.
