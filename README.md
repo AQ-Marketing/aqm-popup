@@ -45,7 +45,7 @@ For previewing the popup without going live to your visitors:
 - **Enable test mode** — when on, the popup shows **only** on the selected test page below, and ignores all frequency caps. It does **not** show on any other page.
 - **Test page** — pick a page. The dropdown includes drafts (so you can test on a private page that only logged-in editors can see).
 
-Test mode is independent of the master **Enable popup** toggle, so you can preview before going live or test new triggers without affecting your production popup. While test mode is active, the popup displays a yellow **Test mode** badge and a dashed outline so it's obvious the live site isn't seeing this version.
+Test mode is independent of the master **Enable popup** toggle, so you can preview before going live or test new triggers without affecting your production popup. The popup renders identically in test mode and production — what you see during preview is exactly what visitors will see.
 
 ### Behavior
 
@@ -57,7 +57,7 @@ The close icon (X) in the top-right is always visible.
 
 ## Styling the popup
 
-All visual properties of the popup body — **background, padding, margins, border, border-radius, max-width, box-shadow, typography** — come from your selected Divi Library layout. The plugin contributes nothing to the popup's appearance except the dark backdrop, the close icon, and (when active) the test-mode badge.
+All visual properties of the popup body — **background, padding, margins, border, border-radius, max-width, box-shadow, typography** — come from your selected Divi Library layout. The plugin contributes nothing to the popup's appearance except the dark backdrop and the close icon.
 
 In practice:
 
@@ -72,12 +72,11 @@ If you want the popup to look like a typical centered modal card, build your Div
 
 ### Overriding the plugin's chrome with custom CSS
 
-If you need to restyle the close icon or test-mode badge:
+If you need to restyle the close icon:
 
 ```css
 /* in your Divi Theme Options → Custom CSS */
 .aqm-popup-close { background: rebeccapurple; }
-.aqm-popup-test-badge { display: none; }   /* hide the test-mode badge */
 ```
 
 ## How it works

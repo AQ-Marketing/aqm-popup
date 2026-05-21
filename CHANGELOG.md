@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.6 — 2026-05-21
+
+- Removed the **Test mode** visual indicators (yellow badge + dashed outline). The popup now renders identically in test mode and production — what you preview is exactly what visitors will see.
+- Test-mode **behavior** is unchanged: page restriction, frequency bypass (cooldown + session cap ignored), time-delay re-arm on dismissal, and console diagnostics all stay.
+- Cleaner CSS — `.aqm-popup-test-badge` and `.aqm-popup-overlay.is-test-mode` rules removed.
+
 ## 1.0.5 — 2026-05-21
 
 - **Click trigger** now listens in **capture phase** on the document, so clicks are caught before any module (Divi or otherwise) can call `event.stopPropagation()` to swallow them. This is the most common reason a click trigger silently fails on Divi pages.

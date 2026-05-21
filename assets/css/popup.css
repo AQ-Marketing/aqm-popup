@@ -95,29 +95,6 @@ body.aqm-popup-open {
     overflow: hidden;
 }
 
-/* Test-mode chrome — yellow badge + dashed outline so the live site is obviously not seeing this. */
-.aqm-popup-test-badge {
-    position: absolute;
-    top: 10px;
-    left: 10px;
-    z-index: 2;
-    padding: 4px 10px;
-    background: #ffba00;
-    color: #111;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.6px;
-    text-transform: uppercase;
-    border-radius: 4px;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
-    pointer-events: none;
-}
-
-.aqm-popup-overlay.is-test-mode {
-    outline: 4px dashed #ffba00;
-    outline-offset: -10px;
-}
-
 @media (prefers-reduced-motion: reduce) {
     .aqm-popup-overlay,
     .aqm-popup-container {
