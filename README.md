@@ -15,7 +15,7 @@ A lightweight site-wide popup plugin for Divi 4 sites. Renders an existing **Div
 
 ## Configure
 
-Settings → AQM Popup.
+WP Admin → **AQM Popup**.
 
 ### General
 

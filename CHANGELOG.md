@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.1 — 2026-05-21
+
+- Settings live under their own top-level admin menu (**AQM Popup**) instead of nested under Settings.
+
 ## 1.0.0 — 2026-05-21
 
 Initial release.

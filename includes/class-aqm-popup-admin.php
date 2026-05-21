@@ -25,17 +25,19 @@ class AQM_Popup_Admin {
     }
 
     public function register_menu() {
-        $this->hook_suffix = add_options_page(
+        $this->hook_suffix = add_menu_page(
             __( 'AQM Popup', 'aqm-popup' ),
             __( 'AQM Popup', 'aqm-popup' ),
             'manage_options',
             self::PAGE_SLUG,
-            array( $this, 'render_page' )
+            array( $this, 'render_page' ),
+            'dashicons-megaphone',
+            30
         );
     }
 
     public function plugin_action_links( $links ) {
-        $url             = admin_url( 'options-general.php?page=' . self::PAGE_SLUG );
+        $url             = admin_url( 'admin.php?page=' . self::PAGE_SLUG );
         $settings_link   = '<a href="' . esc_url( $url ) . '">' . esc_html__( 'Settings', 'aqm-popup' ) . '</a>';
         array_unshift( $links, $settings_link );
         return $links;
