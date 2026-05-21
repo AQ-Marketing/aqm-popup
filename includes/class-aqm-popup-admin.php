@@ -129,6 +129,19 @@ class AQM_Popup_Admin {
         add_settings_field( 'overlay_padding_horizontal', __( 'Overlay padding — left/right (px)',   'aqm-popup' ), array( $this, 'field_number' ),   self::PAGE_SLUG, 'aqm_popup_behavior', array( 'key' => 'overlay_padding_horizontal', 'min' => 0, 'step' => 1, 'description' => __( 'Inset the popup horizontally from the viewport edges. The dark backdrop fills the padded area.', 'aqm-popup' ) ) );
 
         add_settings_section(
+            'aqm_popup_close_icon',
+            __( 'Close icon', 'aqm-popup' ),
+            array( $this, 'section_close_icon_text' ),
+            self::PAGE_SLUG
+        );
+
+        add_settings_field( 'close_size_px',          __( 'Button size (px)',         'aqm-popup' ), array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_close_icon', array( 'key' => 'close_size_px',         'min' => 16, 'max' => 200, 'step' => 1, 'description' => __( 'Width and height of the close button. The X icon scales proportionally (icon = button size × 0.5).', 'aqm-popup' ) ) );
+        add_settings_field( 'close_offset_px',        __( 'Distance from corner (px)','aqm-popup' ), array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_close_icon', array( 'key' => 'close_offset_px',       'min' => 0,  'max' => 100, 'step' => 1, 'description' => __( 'How far from the popup\'s top-right corner the button sits.', 'aqm-popup' ) ) );
+        add_settings_field( 'close_background',       __( 'Background',                'aqm-popup' ), array( $this, 'field_text' ),   self::PAGE_SLUG, 'aqm_popup_close_icon', array( 'key' => 'close_background',      'placeholder' => 'transparent', 'description' => __( 'Any valid CSS color. Examples: <code>transparent</code> (default — bare X with a drop-shadow halo), <code>rgba(0,0,0,0.55)</code> (translucent dark circle, the v1.0.0–v1.0.9 look), <code>#ffffff</code> (solid white), <code>#000</code>.', 'aqm-popup' ) ) );
+        add_settings_field( 'close_icon_color',       __( 'Icon color',                'aqm-popup' ), array( $this, 'field_text' ),   self::PAGE_SLUG, 'aqm_popup_close_icon', array( 'key' => 'close_icon_color',      'placeholder' => '#ffffff',     'description' => __( 'Color of the X mark. Any valid CSS color.', 'aqm-popup' ) ) );
+        add_settings_field( 'close_border_radius_px', __( 'Border radius (px)',        'aqm-popup' ), array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_close_icon', array( 'key' => 'close_border_radius_px','min' => 0, 'max' => 100, 'step' => 1, 'description' => __( 'Roundness of the background. Set to half the button size for a circle (e.g., 18 for a 36px button), 0 for a square.', 'aqm-popup' ) ) );
+
+        add_settings_section(
             'aqm_popup_test_mode',
             __( 'Test mode', 'aqm-popup' ),
             array( $this, 'section_test_mode_text' ),
@@ -149,6 +162,10 @@ class AQM_Popup_Admin {
 
     public function section_frequency_text() {
         echo '<p>' . esc_html__( 'Control how often the popup shows. Per-session count resets when the browser tab closes; cooldown persists across sessions.', 'aqm-popup' ) . '</p>';
+    }
+
+    public function section_close_icon_text() {
+        echo '<p>' . esc_html__( 'Style the X button that closes the popup. The button is positioned at the top-right of the popup; these settings control its appearance.', 'aqm-popup' ) . '</p>';
     }
 
     public function section_test_mode_text() {
@@ -173,6 +190,23 @@ class AQM_Popup_Admin {
         );
         if ( ! empty( $args['description'] ) ) {
             echo '<p class="description">' . esc_html( $args['description'] ) . '</p>';
+        }
+    }
+
+    public function field_text( $args ) {
+        $settings    = aqm_popup_get_settings();
+        $key         = $args['key'];
+        $value       = isset( $settings[ $key ] ) ? $settings[ $key ] : '';
+        $placeholder = isset( $args['placeholder'] ) ? $args['placeholder'] : '';
+        printf(
+            '<input type="text" name="%1$s[%2$s]" value="%3$s" placeholder="%4$s" class="regular-text" />',
+            esc_attr( self::OPTION_KEY ),
+            esc_attr( $key ),
+            esc_attr( $value ),
+            esc_attr( $placeholder )
+        );
+        if ( ! empty( $args['description'] ) ) {
+            echo '<p class="description">' . wp_kses_post( $args['description'] ) . '</p>';
         }
     }
 
@@ -367,6 +401,15 @@ class AQM_Popup_Admin {
         $out['overlay_padding_vertical']   = isset( $input['overlay_padding_vertical'] )   ? max( 0, (int) $input['overlay_padding_vertical'] )   : 0;
         $out['overlay_padding_horizontal'] = isset( $input['overlay_padding_horizontal'] ) ? max( 0, (int) $input['overlay_padding_horizontal'] ) : 0;
 
+        $out['close_size_px']          = isset( $input['close_size_px'] )          ? min( 200, max( 16, (int) $input['close_size_px'] ) )        : $defaults['close_size_px'];
+        $out['close_offset_px']        = isset( $input['close_offset_px'] )        ? min( 100, max( 0,  (int) $input['close_offset_px'] ) )      : $defaults['close_offset_px'];
+        $out['close_background']       = $this->sanitize_css_value( isset( $input['close_background'] ) ? $input['close_background'] : $defaults['close_background'] );
+        $out['close_icon_color']       = $this->sanitize_css_value( isset( $input['close_icon_color'] ) ? $input['close_icon_color'] : $defaults['close_icon_color'] );
+        $out['close_border_radius_px'] = isset( $input['close_border_radius_px'] ) ? min( 100, max( 0, (int) $input['close_border_radius_px'] ) ) : $defaults['close_border_radius_px'];
+        // Empty strings after sanitize → fall back to defaults so the popup never breaks.
+        if ( '' === $out['close_background'] )  $out['close_background']  = $defaults['close_background'];
+        if ( '' === $out['close_icon_color'] )  $out['close_icon_color']  = $defaults['close_icon_color'];
+
         $out['test_mode_enabled']      = ! empty( $input['test_mode_enabled'] );
         $out['test_mode_page_id']      = isset( $input['test_mode_page_id'] ) ? max( 0, (int) $input['test_mode_page_id'] ) : 0;
 
@@ -458,6 +501,19 @@ class AQM_Popup_Admin {
             'update_available' => false,
             'current_version'  => $current_version,
         ) );
+    }
+
+    /**
+     * Sanitize a free-form CSS value (color, length, etc.) by stripping any
+     * characters that could break out of the inline `<style>` context the
+     * display class injects on render. Conservative — strips < > ; { } " '
+     * and backslash. Returns trimmed result. Empty string is OK; the caller
+     * falls back to the default in that case.
+     */
+    private function sanitize_css_value( $input ) {
+        $input = sanitize_text_field( (string) $input );
+        $input = preg_replace( '/[<>;{}"\'\\\\]/', '', $input );
+        return trim( $input );
     }
 
     private function is_divi_active() {

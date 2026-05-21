@@ -141,6 +141,26 @@ class AQM_Popup_Display {
         if ( ! empty( $settings['edge_to_edge_mode'] ) ) {
             $overlay_classes[] = 'aqm-popup-edge-to-edge';
         }
+
+        // Close-icon user customizations: emit an inline <style> block targeting
+        // #aqm-popup-close (specificity 1,0,0) so the user's choices reliably
+        // beat the defaults in popup.css (.aqm-popup-close at 0,1,0).
+        $close_size    = max( 16, min( 200, (int) $settings['close_size_px'] ) );
+        $close_offset  = max( 0, min( 100, (int) $settings['close_offset_px'] ) );
+        $close_bg      = (string) $settings['close_background'];
+        $close_color   = (string) $settings['close_icon_color'];
+        $close_radius  = max( 0, min( 100, (int) $settings['close_border_radius_px'] ) );
+        $close_icon_sz = (int) round( $close_size * 0.5 );
+        $close_css     = sprintf(
+            '#aqm-popup-close{width:%1$dpx;height:%1$dpx;top:%2$dpx;right:%2$dpx;background:%3$s;color:%4$s;border-radius:%5$dpx}#aqm-popup-close .aqm-popup-close-icon{width:%6$dpx;height:%6$dpx}',
+            $close_size,
+            $close_offset,
+            $close_bg,
+            $close_color,
+            $close_radius,
+            $close_icon_sz
+        );
+        echo '<style id="aqm-popup-close-style">' . $close_css . '</style>'; // phpcs:ignore WordPress.Security.EscapeOutput -- values are sanitized via sanitize_css_value() + int casts in the admin sanitize callback.
         ?>
         <div id="aqm-popup-overlay" class="<?php echo esc_attr( implode( ' ', $overlay_classes ) ); ?>" hidden role="dialog" aria-modal="true" aria-label="<?php esc_attr_e( 'Popup', 'aqm-popup' ); ?>" style="<?php echo esc_attr( $style_overlay ); ?>">
             <div id="aqm-popup-container" class="aqm-popup-container">

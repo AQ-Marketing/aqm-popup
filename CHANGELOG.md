@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.18 — 2026-05-21
+
+- **New Close icon section** in the AQM Popup settings page. Style the X button without writing Custom CSS.
+  - **Button size (px)** — width + height. Icon scales proportionally (icon = size × 0.5). Default `36`.
+  - **Distance from corner (px)** — top + right offset. Default `10`.
+  - **Background** — any valid CSS color string. Use `transparent` for a bare X with drop-shadow halo (default), `rgba(0,0,0,0.55)` for the v1.0.0–v1.0.9 translucent dark circle, any hex / rgb / named color.
+  - **Icon color** — any valid CSS color string. Default `#ffffff`.
+  - **Border radius (px)** — set to half the button size for a circle, 0 for a square. Default `0`.
+- Implementation: display class emits an inline `<style id="aqm-popup-close-style">` block targeting `#aqm-popup-close` (specificity 1,0,0), which reliably beats the class-based defaults in `popup.css`.
+- CSS values are sanitized in the admin to strip characters that could break out of the inline `<style>` context (`< > ; { } " ' \\`). Empty results fall back to the default value rather than rendering broken CSS.
+
 ## 1.0.17 — 2026-05-21
 
 - **Divi borders + box-shadows on images now render in the popup.** Plain CSS borders were already working (the plugin doesn't touch `border` anywhere), but the popup container had `overflow: hidden` carried over from the v1.0.11 no-scrollbar work, which clipped `box-shadow`, `outline`, and any decorative pseudo-elements that render outside the box. Container is now `overflow: visible`.
