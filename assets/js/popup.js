@@ -70,6 +70,7 @@
         }
 
         var teardownFns = [];
+        var rearmFns = []; // run on dismiss in test mode so any one-shot trigger (e.g. setTimeout-based delay) fires again
         var isOpen = false;
         var firedOnce = false;
 
@@ -77,6 +78,12 @@
             while (teardownFns.length) {
                 var fn = teardownFns.pop();
                 try { fn(); } catch (e) { /* ignore */ }
+            }
+        }
+
+        function rearmTriggers() {
+            for (var i = 0; i < rearmFns.length; i++) {
+                try { rearmFns[i](); } catch (e) { /* ignore */ }
             }
         }
 
@@ -117,7 +124,12 @@
             window.setTimeout(function () {
                 if (!isOpen) overlay.hidden = true;
             }, 220);
-            if (!testMode) {
+            if (testMode) {
+                // Test mode: no frequency tracking. Re-arm one-shot triggers
+                // (delay) so the popup can be opened again on the same page load
+                // for debugging/previewing.
+                rearmTriggers();
+            } else {
                 safeSetLocal(STORAGE.DISMISSED_AT, String(Date.now()));
                 teardownAllTriggers();
             }
@@ -146,8 +158,16 @@
         // ----- triggers -----
 
         if (triggers.delay && typeof triggers.delay.seconds === 'number') {
-            var timer = window.setTimeout(showPopup, Math.max(0, triggers.delay.seconds) * 1000);
-            teardownFns.push(function () { window.clearTimeout(timer); });
+            var delaySeconds = Math.max(0, triggers.delay.seconds);
+            var delayTimer = window.setTimeout(showPopup, delaySeconds * 1000);
+            teardownFns.push(function () {
+                if (delayTimer !== null) window.clearTimeout(delayTimer);
+                delayTimer = null;
+            });
+            rearmFns.push(function () {
+                if (delayTimer !== null) window.clearTimeout(delayTimer);
+                delayTimer = window.setTimeout(showPopup, delaySeconds * 1000);
+            });
         }
 
         if (triggers.scroll && typeof triggers.scroll.percent === 'number') {

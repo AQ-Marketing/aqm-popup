@@ -123,7 +123,7 @@ class AQM_Popup_Admin {
             self::PAGE_SLUG
         );
 
-        add_settings_field( 'test_mode_enabled', __( 'Enable test mode', 'aqm-popup' ), array( $this, 'field_checkbox' ),       self::PAGE_SLUG, 'aqm_popup_test_mode', array( 'key' => 'test_mode_enabled', 'description' => __( 'While test mode is on, the popup appears only on the selected page below and ignores frequency caps (cooldown + per-session limit). All other pages will not show the popup.', 'aqm-popup' ) ) );
+        add_settings_field( 'test_mode_enabled', __( 'Enable test mode', 'aqm-popup' ), array( $this, 'field_checkbox' ),       self::PAGE_SLUG, 'aqm_popup_test_mode', array( 'key' => 'test_mode_enabled', 'description' => __( 'While test mode is on, frequency is fully ignored (no cooldown, no session cap) and time-delay re-arms after dismissal — open the popup as many times as you need for debugging.', 'aqm-popup' ) ) );
         add_settings_field( 'test_mode_page_id', __( 'Test page',        'aqm-popup' ), array( $this, 'field_test_mode_page' ), self::PAGE_SLUG, 'aqm_popup_test_mode' );
     }
 
@@ -140,7 +140,12 @@ class AQM_Popup_Admin {
     }
 
     public function section_test_mode_text() {
-        echo '<p>' . esc_html__( 'Preview the popup on a single page without affecting the live site. While test mode is on, the popup shows on every page load on the selected page (no cooldown, no session cap), and it does not show anywhere else.', 'aqm-popup' ) . '</p>';
+        echo '<p>' . esc_html__( 'Preview the popup on a single page without affecting the live site. While test mode is on:', 'aqm-popup' ) . '</p>';
+        echo '<ul style="list-style:disc;margin-left:20px;">';
+        echo '<li>' . esc_html__( 'The popup shows ONLY on the selected page below. All other pages are suppressed.', 'aqm-popup' ) . '</li>';
+        echo '<li>' . esc_html__( 'Frequency is fully ignored — no cooldown after dismissal, no per-session limit. The popup can be opened as many times as needed for debugging.', 'aqm-popup' ) . '</li>';
+        echo '<li>' . esc_html__( 'After dismissal, all triggers re-arm immediately (including the time-delay trigger), so reopening on the same page load is one trigger away.', 'aqm-popup' ) . '</li>';
+        echo '</ul>';
     }
 
     public function field_checkbox( $args ) {

@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.4 — 2026-05-21
+
+- **Test mode** now re-arms the time-delay trigger after dismissal, so the popup can be opened as many times as you need on the same page load (previously, after dismissing once, only scroll/exit/click triggers could re-fire — delay was one-shot per page load).
+- Tightened test-mode admin copy to spell out that frequency is fully ignored (no cooldown, no session cap) when test mode is on.
+
+(Frequency was already bypassed in test mode in v1.0.2 — this release closes the time-delay gap so all four trigger types behave consistently during testing.)
+
 ## 1.0.3 — 2026-05-21
 
 **Divi controls all popup styling.**
