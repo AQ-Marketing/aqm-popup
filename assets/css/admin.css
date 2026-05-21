@@ -1,0 +1,36 @@
+.aqm-popup-settings .aqm-popup-intro {
+    max-width: 720px;
+    color: #50575e;
+}
+
+.aqm-popup-settings .form-table th {
+    width: 220px;
+}
+
+.aqm-popup-settings .aqm-popup-trigger-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+}
+
+.aqm-popup-settings .aqm-popup-trigger-sub {
+    margin-top: 8px;
+    padding-left: 24px;
+    border-left: 2px solid #dcdcde;
+}
+
+.aqm-popup-settings .aqm-popup-trigger-sub label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.aqm-popup-settings .aqm-popup-trigger-sub.is-disabled {
+    opacity: 0.45;
+    pointer-events: none;
+}
+
+.aqm-popup-settings .form-table p.description {
+    max-width: 640px;
+}

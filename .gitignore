@@ -1,0 +1,22 @@
+# OS junk
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor / IDE
+.idea/
+.vscode/
+*.swp
+*~
+
+# Build artifacts
+*.zip
+/build/
+/dist/
+
+# Dependency caches
+/node_modules/
+/vendor/
+
+# Local-only debug
+debug.log
