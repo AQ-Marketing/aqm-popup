@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.16 — 2026-05-21
+
+- **Image fits within the viewport — no bottom clipping.** Reintroduces aspect-preserving image scaling: `max-width` + `max-height` + `width: auto` + `height: auto` on images/videos inside the popup so tall content scales down to fit instead of being clipped by the overlay's `overflow: hidden`.
+- **Container + image max-dimensions know about overlay padding.** Display class now sets CSS custom properties `--aqm-popup-max-h: calc(100vh - 2 × Vpx)` and `--aqm-popup-max-w: calc(100vw - 2 × Hpx)` on the overlay element. Container and image rules consume these via `var()`, so when you set overlay padding to e.g. 60px vertical, the popup content shrinks to fit within `viewport_height - 120px`. Image preserves aspect ratio while shrinking.
+- **Trade-off (re-acknowledged from v1.0.11):** on a viewport much wider than the image's natural size, the image renders at its natural intrinsic size rather than filling the container width. This is the price of aspect-preservation when Divi's `width: 100%` would otherwise stretch the image vertically. Use a larger/wider source image if you want it bigger on desktops, or override `#aqm-popup-content img { width: 100% }` in Custom CSS to revert to stretch-behavior.
+
 ## 1.0.15 — 2026-05-21
 
 - **Moved the padding setting from the section to the overlay.** v1.0.14's section-padding approach pushed the image *inside* the Divi section — if the section had any background color (very common with `et_pb_with_background`), the padded area showed as that background color (e.g., white) instead of the dark backdrop. The setting now insets the popup from the viewport edges by adding padding to `.aqm-popup-overlay` directly, so the dark backdrop fills the padded area.

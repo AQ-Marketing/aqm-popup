@@ -129,7 +129,13 @@ class AQM_Popup_Display {
         if ( $v > 0 || $h > 0 ) {
             $overlay_styles[] = sprintf( 'padding: %dpx %dpx', $v, $h );
         }
-        $style_overlay = implode( '; ', $overlay_styles ) . ';';
+        // CSS custom properties: the available content size inside the overlay
+        // (viewport minus padding). Used by .aqm-popup-container and image
+        // scaling rules in popup.css to constrain media to the visible area
+        // so images fit the viewport without clipping at the bottom.
+        $overlay_styles[] = sprintf( '--aqm-popup-max-h: calc(100vh - %dpx)', $v * 2 );
+        $overlay_styles[] = sprintf( '--aqm-popup-max-w: calc(100vw - %dpx)', $h * 2 );
+        $style_overlay    = implode( '; ', $overlay_styles ) . ';';
 
         $overlay_classes = array( 'aqm-popup-overlay' );
         if ( ! empty( $settings['edge_to_edge_mode'] ) ) {

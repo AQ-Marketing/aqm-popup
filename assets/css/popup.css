@@ -38,30 +38,37 @@
  */
 .aqm-popup-container {
     position: relative;
-    max-width: 100%;
-    max-height: 100%;
+    max-width: var(--aqm-popup-max-w, 100vw);
+    max-height: var(--aqm-popup-max-h, 100vh);
     overflow: hidden;
     transform: translateY(12px) scale(0.98);
     transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /*
- * Standard responsive max-width on media inside the popup — nothing else.
- * The plugin deliberately does NOT set width/height/max-height/object-fit
- * here. v1.0.11 tried `width: auto + max-height: 100vh` to "fit to viewport"
- * but that override broke Divi's own image sizing — most visibly on
- * Fullwidth Image modules (`.et_pb_fullwidth_image img { width: 100% }`)
- * which then rendered at their natural intrinsic size instead of filling
- * the container. From v1.0.13 onward Divi controls all image sizing.
+ * Image/video fit-to-viewport. v1.0.16 reintroduces aspect-preserving
+ * scaling on media inside the popup so a tall image clips no longer:
  *
- * Trade-off: with overlay + container at `overflow: hidden` + `max-height:
- * 100vh`, any content that exceeds the viewport (e.g., a very tall image
- * scaled up by `.et_pb_fullwidth_image img { width: 100% }`) will clip at
- * the bottom rather than show a scrollbar. Design popup content that fits.
+ *   - max-width/max-height bound the box to the overlay's content area
+ *     (viewport minus overlay padding, exposed as CSS vars by the display
+ *     class on the overlay element).
+ *   - width: auto + height: auto override Divi's width: 100% on Fullwidth
+ *     Image modules so the browser preserves the image's intrinsic aspect
+ *     ratio when constraints kick in.
+ *
+ * Trade-off (carried over from v1.0.11's earlier attempt): on viewports
+ * MUCH wider than the image's natural size, the image renders at its
+ * natural intrinsic size rather than filling the container width. That's
+ * the cost of preserving aspect — for square-ish images in landscape
+ * viewports there's no way to both "fill width" and "fit height" without
+ * stretching. Use a wider source image if you want it bigger on desktops.
  */
 #aqm-popup-content img,
 #aqm-popup-content video {
     max-width: 100%;
+    max-height: var(--aqm-popup-max-h, 100vh);
+    width: auto;
+    height: auto;
 }
 
 .aqm-popup-overlay.is-open .aqm-popup-container {
