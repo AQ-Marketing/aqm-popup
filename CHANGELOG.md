@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.10 — 2026-05-21
+
+- **Edge-to-edge content** now also forces Divi rows to `width: 100%` (Divi default is 80%). This was the main cause of "image still has a white strip on either side after enabling edge-to-edge mode" — the row width default was leaving 10% empty on each side.
+- **Close icon** no longer has a hard-coded dark circle background. It's now a plain white X with a drop-shadow halo for visibility on both light and dark content. Override `.aqm-popup-close` via Divi → Custom CSS if you want a circle, square, brand color, etc.
+- Combined with v1.0.9's padding reset, the close icon now overlaps the top-right corner of your actual Divi content when edge-to-edge mode is on, because there's no longer any phantom white space between the container and the content.
+
 ## 1.0.9 — 2026-05-21
 
 - New **Edge-to-edge content** setting in **Behavior**. When on, the plugin zeroes out Divi's default section padding (4% top/bottom), row padding (27px top/bottom), and image-module bottom margin inside the popup. Use it for popups that should be a single edge-to-edge image or full-bleed content without having to manually zero those values on every Library layout.

@@ -46,9 +46,9 @@
 }
 
 /*
- * Close icon. Floats above the Divi content in the top-right corner of
- * the container. Override `.aqm-popup-close` via custom CSS if you need
- * to restyle or reposition it.
+ * Close icon. No background — just a white X with a drop-shadow halo for
+ * visibility on light and dark content. Override `.aqm-popup-close` via
+ * custom CSS if you want a circle, square, brand color, etc.
  */
 .aqm-popup-close {
     position: absolute;
@@ -59,15 +59,15 @@
     padding: 0;
     margin: 0;
     border: 0;
-    border-radius: 50%;
-    background: rgba(0, 0, 0, 0.55);
+    background: transparent;
     color: #fff;
     cursor: pointer;
     z-index: 2;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    transition: background-color 150ms ease-out, transform 150ms ease-out;
+    filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.85));
+    transition: transform 150ms ease-out, filter 150ms ease-out;
     -webkit-appearance: none;
     appearance: none;
     line-height: 1;
@@ -75,13 +75,15 @@
 
 .aqm-popup-close:hover,
 .aqm-popup-close:focus {
-    background: rgba(0, 0, 0, 0.85);
+    background: transparent;
     outline: none;
-    transform: scale(1.05);
+    transform: scale(1.15);
+    filter: drop-shadow(0 1px 6px rgba(0, 0, 0, 0.95));
 }
 
 .aqm-popup-close:focus-visible {
-    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.75), 0 0 0 5px rgba(0, 0, 0, 0.6);
+    outline: 2px solid #fff;
+    outline-offset: 4px;
 }
 
 .aqm-popup-close-icon {
@@ -116,17 +118,25 @@ body.aqm-popup-open {
 
 /*
  * Edge-to-edge content mode (opt-in via "Behavior → Edge-to-edge content" in admin).
- * Overrides Divi's default section/row padding and image-module bottom margin
- * inside the popup so content sits flush against the popup edges. The selector
- * specificity (0,2,0) beats Divi's base .et_pb_section rule (0,1,0); user-set
- * per-section padding in Divi UI is typically generated with equal or higher
- * specificity, so explicit per-section settings still take effect on top of
- * this reset.
+ *
+ * Overrides Divi defaults inside the popup so content fills the container:
+ *   - Section / row / column padding → 0 (Divi defaults are 4%, 27px, varies)
+ *   - Row width → 100% (Divi default is 80% — this is the main cause of the
+ *     "white strip on either side of an edge-to-edge image" symptom)
+ *   - Image-module bottom margin → 0
+ *
+ * Selector specificity (0,2,0) beats Divi's base rules; per-element overrides
+ * the user sets in Divi UI are typically generated at equal or higher
+ * specificity and still take effect on top of this reset.
  */
 .aqm-popup-edge-to-edge .et_pb_section,
 .aqm-popup-edge-to-edge .et_pb_row,
 .aqm-popup-edge-to-edge .et_pb_column {
     padding: 0;
+}
+.aqm-popup-edge-to-edge .et_pb_row {
+    width: 100%;
+    max-width: 100%;
 }
 .aqm-popup-edge-to-edge .et_pb_module {
     margin-bottom: 0;
