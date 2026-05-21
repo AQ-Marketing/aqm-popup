@@ -114,29 +114,26 @@ class AQM_Popup_Display {
         $content = apply_filters( 'the_content', $layout->post_content );
         $content = str_replace( ']]>', ']]&gt;', $content );
 
-        $opacity       = min( 1, max( 0, (float) $settings['overlay_opacity'] ) );
-        $style_overlay = sprintf( 'background-color: rgba(0,0,0,%s);', esc_attr( (string) $opacity ) );
+        $opacity = min( 1, max( 0, (float) $settings['overlay_opacity'] ) );
+
+        // User-configured overlay padding: insets the popup from viewport edges.
+        // The dark backdrop fills the padded area (because the backdrop IS the
+        // overlay's background-color). Combined with `box-sizing: border-box`
+        // on the overlay (set in popup.css) so the overlay still spans the
+        // full viewport while padding pushes the content area inward.
+        $v = max( 0, (int) $settings['overlay_padding_vertical'] );
+        $h = max( 0, (int) $settings['overlay_padding_horizontal'] );
+
+        $overlay_styles   = array();
+        $overlay_styles[] = sprintf( 'background-color: rgba(0,0,0,%s)', esc_attr( (string) $opacity ) );
+        if ( $v > 0 || $h > 0 ) {
+            $overlay_styles[] = sprintf( 'padding: %dpx %dpx', $v, $h );
+        }
+        $style_overlay = implode( '; ', $overlay_styles ) . ';';
 
         $overlay_classes = array( 'aqm-popup-overlay' );
         if ( ! empty( $settings['edge_to_edge_mode'] ) ) {
             $overlay_classes[] = 'aqm-popup-edge-to-edge';
-        }
-
-        // User-configured section padding: emit a high-specificity !important
-        // rule scoped to the popup. This intentionally beats Divi's base
-        // `.et_pb_section.et_pb_fullwidth_section { padding: 0 }` lock,
-        // because Divi UI's own padding control is non-functional for
-        // Fullwidth Sections (the most common reason a user reaches for
-        // this setting).
-        $v = max( 0, (int) $settings['section_padding_vertical'] );
-        $h = max( 0, (int) $settings['section_padding_horizontal'] );
-        if ( $v > 0 || $h > 0 ) {
-            $css = sprintf(
-                '#aqm-popup-content .et_pb_section{padding:%dpx %dpx !important}',
-                $v,
-                $h
-            );
-            echo '<style id="aqm-popup-section-padding">' . $css . '</style>'; // phpcs:ignore WordPress.Security.EscapeOutput
         }
         ?>
         <div id="aqm-popup-overlay" class="<?php echo esc_attr( implode( ' ', $overlay_classes ) ); ?>" hidden role="dialog" aria-modal="true" aria-label="<?php esc_attr_e( 'Popup', 'aqm-popup' ); ?>" style="<?php echo esc_attr( $style_overlay ); ?>">

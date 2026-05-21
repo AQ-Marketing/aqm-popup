@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.15 — 2026-05-21
+
+- **Moved the padding setting from the section to the overlay.** v1.0.14's section-padding approach pushed the image *inside* the Divi section — if the section had any background color (very common with `et_pb_with_background`), the padded area showed as that background color (e.g., white) instead of the dark backdrop. The setting now insets the popup from the viewport edges by adding padding to `.aqm-popup-overlay` directly, so the dark backdrop fills the padded area.
+- Renamed setting keys: `section_padding_*` → `overlay_padding_*`. Existing values get reset to 0 on update — re-enter them in **Behavior** if you had non-zero values configured.
+- Container's `max-height` switched from `100vh` to `100%` so it adapts to the overlay's content area when overlay padding is set.
+- Overlay now uses `box-sizing: border-box` so the overlay still spans the full viewport while padding pushes the popup inward.
+
 ## 1.0.14 — 2026-05-21
 
 - **New Section padding fields** under Behavior — top/bottom (px) and left/right (px). Forces padding on every Divi section inside the popup, with `!important` specificity, scoped to `#aqm-popup-content .et_pb_section`. Bypasses Divi's lock that prevents the Divi-UI padding control from working on **Fullwidth Sections** (`.et_pb_fullwidth_section { padding: 0 }` in Divi's base CSS).
