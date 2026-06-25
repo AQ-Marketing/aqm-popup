@@ -5,6 +5,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 class AQM_Popup_Display {
     private static $instance = null;
+    private $design          = null;
+    private $resolved        = false;
+    private $is_test         = false;
 
     public static function get_instance() {
         if ( null === self::$instance ) {
@@ -18,91 +21,129 @@ class AQM_Popup_Display {
         add_action( 'wp_footer', array( $this, 'maybe_render' ), 99 );
     }
 
-    private function should_run() {
+    /**
+     * Resolve which design (if any) should display in the current request:
+     * the manually-active design, gated by test mode OR (master-enable + its
+     * date window). Returns the design array, or null.
+     */
+    private function resolve_design() {
+        if ( $this->resolved ) {
+            return $this->design;
+        }
+        $this->resolved = true;
+
         if ( is_admin() ) {
-            return false;
-        }
-        $settings = aqm_popup_get_settings();
-
-        if ( ! $this->has_content( $settings ) ) {
-            return false;
-        }
-        if ( ! $this->has_any_trigger_enabled( $settings ) ) {
-            return false;
+            return null;
         }
 
-        if ( ! empty( $settings['test_mode_enabled'] ) ) {
-            $test_page = (int) $settings['test_mode_page_id'];
-            if ( $test_page <= 0 ) {
-                return false;
+        $s         = aqm_popup_get_settings();
+        $active_id = $s['active'];
+        if ( '' === $active_id || ! isset( $s['designs'][ $active_id ] ) ) {
+            return null;
+        }
+        $design = $s['designs'][ $active_id ];
+
+        // Test mode: preview the active design on the chosen page only.
+        if ( ! empty( $s['test_mode_enabled'] ) && (int) $s['test_mode_page_id'] > 0 ) {
+            if ( is_page( (int) $s['test_mode_page_id'] ) ) {
+                $this->design  = $design;
+                $this->is_test = true;
             }
-            return is_page( $test_page );
+            return $this->design;
         }
 
-        if ( empty( $settings['enabled'] ) ) {
+        // Normal: master enable + within the design's date window.
+        if ( empty( $s['enabled'] ) ) {
+            return null;
+        }
+        if ( ! $this->within_schedule( $design ) ) {
+            return null;
+        }
+
+        $this->design = $design;
+        return $this->design;
+    }
+
+    private function within_schedule( $design ) {
+        $start = ! empty( $design['start_date'] ) ? $design['start_date'] : '';
+        $end   = ! empty( $design['end_date'] ) ? $design['end_date'] : '';
+        if ( '' === $start && '' === $end ) {
+            return true;
+        }
+        // Site-timezone "today" as Y-m-d; lexical compare works for this format.
+        $today = current_time( 'Y-m-d' );
+        if ( '' !== $start && $today < $start ) {
+            return false;
+        }
+        if ( '' !== $end && $today > $end ) {
             return false;
         }
         return true;
     }
 
-    private function is_test_mode_active() {
-        $settings = aqm_popup_get_settings();
-        return ! empty( $settings['test_mode_enabled'] ) && (int) $settings['test_mode_page_id'] > 0;
+    private function should_run() {
+        $design = $this->resolve_design();
+        if ( ! $design ) {
+            return false;
+        }
+        if ( ! $this->has_content( $design ) ) {
+            return false;
+        }
+        if ( ! $this->has_any_trigger_enabled( $design ) ) {
+            return false;
+        }
+        return true;
     }
 
-    private function has_content( $settings ) {
-        return (int) $settings['content_image_id'] > 0
-            || (int) $settings['style_bg_image_id'] > 0
-            || '' !== trim( (string) $settings['content_heading'] )
-            || '' !== trim( (string) $settings['content_body'] )
-            || ( '' !== trim( (string) $settings['content_button_label'] ) && '' !== trim( (string) $settings['content_button_url'] ) );
+    private function has_content( $design ) {
+        return (int) $design['content_image_id'] > 0
+            || (int) $design['style_bg_image_id'] > 0
+            || '' !== trim( (string) $design['content_heading'] )
+            || '' !== trim( (string) $design['content_body'] )
+            || ( '' !== trim( (string) $design['content_button_label'] ) && '' !== trim( (string) $design['content_button_url'] ) );
     }
 
-    private function has_any_trigger_enabled( $settings ) {
-        return ! empty( $settings['trigger_delay_enabled'] )
-            || ! empty( $settings['trigger_scroll_enabled'] )
-            || ! empty( $settings['trigger_exit_enabled'] )
-            || ( ! empty( $settings['trigger_click_enabled'] ) && '' !== trim( (string) $settings['trigger_click_selector'] ) );
+    private function has_any_trigger_enabled( $design ) {
+        return ! empty( $design['trigger_delay_enabled'] )
+            || ! empty( $design['trigger_scroll_enabled'] )
+            || ! empty( $design['trigger_exit_enabled'] )
+            || ( ! empty( $design['trigger_click_enabled'] ) && '' !== trim( (string) $design['trigger_click_selector'] ) );
     }
 
     public function maybe_enqueue() {
         if ( ! $this->should_run() ) {
             return;
         }
-        $settings = aqm_popup_get_settings();
+        $design = $this->resolve_design();
 
-        wp_enqueue_style(
-            'aqm-popup',
-            AQM_POPUP_URL . 'assets/css/popup.css',
-            array(),
-            AQM_POPUP_VERSION
-        );
-        wp_enqueue_script(
-            'aqm-popup',
-            AQM_POPUP_URL . 'assets/js/popup.js',
-            array(),
-            AQM_POPUP_VERSION,
-            true
-        );
+        wp_enqueue_style( 'aqm-popup', AQM_POPUP_URL . 'assets/css/popup.css', array(), AQM_POPUP_VERSION );
+
+        // Google Font for this design (if any).
+        $font_url = aqm_popup_google_font_url( isset( $design['style_font_family'] ) ? $design['style_font_family'] : '' );
+        if ( $font_url ) {
+            wp_enqueue_style( 'aqm-popup-font', $font_url, array(), null ); // phpcs:ignore WordPress.WP.EnqueuedResourceParameters.MissingVersion -- Google Fonts URL is versionless.
+        }
+
+        wp_enqueue_script( 'aqm-popup', AQM_POPUP_URL . 'assets/js/popup.js', array(), AQM_POPUP_VERSION, true );
 
         wp_localize_script( 'aqm-popup', 'aqmPopupSettings', array(
             'triggers' => array(
-                'delay'   => ! empty( $settings['trigger_delay_enabled'] ) ? array( 'seconds' => (int) $settings['trigger_delay_seconds'] ) : null,
-                'scroll'  => ! empty( $settings['trigger_scroll_enabled'] ) ? array( 'percent' => (int) $settings['trigger_scroll_percent'] ) : null,
-                'exit'    => ! empty( $settings['trigger_exit_enabled'] ) ? true : null,
-                'click'   => ( ! empty( $settings['trigger_click_enabled'] ) && '' !== trim( (string) $settings['trigger_click_selector'] ) )
-                    ? array( 'selector' => $settings['trigger_click_selector'] )
+                'delay'  => ! empty( $design['trigger_delay_enabled'] ) ? array( 'seconds' => (int) $design['trigger_delay_seconds'] ) : null,
+                'scroll' => ! empty( $design['trigger_scroll_enabled'] ) ? array( 'percent' => (int) $design['trigger_scroll_percent'] ) : null,
+                'exit'   => ! empty( $design['trigger_exit_enabled'] ) ? true : null,
+                'click'  => ( ! empty( $design['trigger_click_enabled'] ) && '' !== trim( (string) $design['trigger_click_selector'] ) )
+                    ? array( 'selector' => $design['trigger_click_selector'] )
                     : null,
             ),
             'frequency' => array(
-                'maxPerSession' => max( 1, (int) $settings['max_per_session'] ),
-                'cooldownDays'  => max( 0, (float) $settings['cooldown_days'] ),
+                'maxPerSession' => max( 1, (int) $design['max_per_session'] ),
+                'cooldownDays'  => max( 0, (float) $design['cooldown_days'] ),
             ),
             'behavior' => array(
-                'closeOnOverlayClick' => ! empty( $settings['close_on_overlay_click'] ),
-                'closeOnEsc'          => ! empty( $settings['close_on_esc'] ),
+                'closeOnOverlayClick' => ! empty( $design['close_on_overlay_click'] ),
+                'closeOnEsc'          => ! empty( $design['close_on_esc'] ),
             ),
-            'testMode' => $this->is_test_mode_active(),
+            'testMode' => $this->is_test,
         ) );
     }
 
@@ -110,69 +151,59 @@ class AQM_Popup_Display {
         if ( ! $this->should_run() ) {
             return;
         }
-        $settings = aqm_popup_get_settings();
+        $design = $this->resolve_design();
 
-        $content = $this->build_content( $settings );
+        $content = $this->build_content( $design );
         if ( '' === $content ) {
             return;
         }
 
-        $opacity = min( 1, max( 0, (float) $settings['overlay_opacity'] ) );
-
-        // User-configured overlay padding: insets the popup from viewport edges.
-        // The dark backdrop fills the padded area (because the backdrop IS the
-        // overlay's background-color). Combined with `box-sizing: border-box`
-        // on the overlay (set in popup.css) so the overlay still spans the
-        // full viewport while padding pushes the content area inward.
-        $v = max( 0, (int) $settings['overlay_padding_vertical'] );
-        $h = max( 0, (int) $settings['overlay_padding_horizontal'] );
+        $opacity = min( 1, max( 0, (float) $design['overlay_opacity'] ) );
+        $v       = max( 0, (int) $design['overlay_padding_vertical'] );
+        $h       = max( 0, (int) $design['overlay_padding_horizontal'] );
 
         $overlay_styles   = array();
         $overlay_styles[] = sprintf( 'background-color: rgba(0,0,0,%s)', esc_attr( (string) $opacity ) );
         if ( $v > 0 || $h > 0 ) {
             $overlay_styles[] = sprintf( 'padding: %dpx %dpx', $v, $h );
         }
-        // CSS custom properties: the available content size inside the overlay
-        // (viewport minus padding). Used by .aqm-popup-container and image
-        // scaling rules in popup.css to constrain media to the visible area
-        // so images fit the viewport without clipping at the bottom.
         $overlay_styles[] = sprintf( '--aqm-popup-max-h: calc(100vh - %dpx)', $v * 2 );
         $overlay_styles[] = sprintf( '--aqm-popup-max-w: calc(100vw - %dpx)', $h * 2 );
         $style_overlay    = implode( '; ', $overlay_styles ) . ';';
 
-        $overlay_classes = array( 'aqm-popup-overlay' );
-
-        // User-customizable inline styles: emit one <style> block scoped to
-        // the popup elements. Selectors use IDs (1,0,0) so values reliably
-        // beat the class-based defaults in popup.css (0,1,0).
-        $close_size    = max( 16, min( 200, (int) $settings['close_size_px'] ) );
-        $close_offset  = max( -100, min( 100, (int) $settings['close_offset_px'] ) );
-        $close_bg      = (string) $settings['close_background'];
-        $close_color   = (string) $settings['close_icon_color'];
-        $close_radius  = max( 0, min( 100, (int) $settings['close_border_radius_px'] ) );
+        // Close icon.
+        $close_size    = max( 16, min( 200, (int) $design['close_size_px'] ) );
+        $close_offset  = max( -100, min( 100, (int) $design['close_offset_px'] ) );
+        $close_bg      = (string) $design['close_background'];
+        $close_color   = (string) $design['close_icon_color'];
+        $close_radius  = max( 0, min( 100, (int) $design['close_border_radius_px'] ) );
         $close_icon_sz = (int) round( $close_size * 0.5 );
-        $popup_border  = (string) $settings['popup_border'];
-        $popup_radius  = max( 0, min( 200, (int) $settings['popup_border_radius_px'] ) );
+        $popup_border  = (string) $design['popup_border'];
+        $popup_radius  = max( 0, min( 200, (int) $design['popup_border_radius_px'] ) );
 
-        // Body styling (validated hex colors + clamped ints + enum align).
-        $body_bg     = $this->safe_hex( $settings['style_bg_color'], '#ffffff' );
-        $body_text   = $this->safe_hex( $settings['style_text_color'], '#1d2327' );
-        $btn_bg      = $this->safe_hex( $settings['style_button_bg'], '#c10f30' );
-        $btn_text    = $this->safe_hex( $settings['style_button_text_color'], '#ffffff' );
-        $max_width   = max( 240, min( 1200, (int) $settings['style_max_width'] ) );
-        $padding     = max( 0, min( 96, (int) $settings['style_padding'] ) );
-        $align       = ( 'left' === $settings['style_align'] ) ? 'left' : 'center';
+        // Body styling.
+        $body_bg     = $this->safe_hex( $design['style_bg_color'], '#ffffff' );
+        $body_text   = $this->safe_hex( $design['style_text_color'], '#1d2327' );
+        $btn_bg      = $this->safe_hex( $design['style_button_bg'], '#c10f30' );
+        $btn_text    = $this->safe_hex( $design['style_button_text_color'], '#ffffff' );
+        $max_width   = max( 240, min( 1200, (int) $design['style_max_width'] ) );
+        $min_height  = max( 0, min( 1200, (int) $design['style_min_height'] ) );
+        $padding     = max( 0, min( 96, (int) $design['style_padding'] ) );
+        $align       = $this->one_of( $design['style_align'], array( 'left', 'center', 'right' ), 'center' );
+        $valign      = $this->one_of( $design['style_vertical_align'], array( 'top', 'center', 'bottom' ), 'top' );
+        $font_stack  = aqm_popup_font_stack( isset( $design['style_font_family'] ) ? $design['style_font_family'] : '' );
+        $h_size      = max( 10, min( 96, (int) $design['style_heading_size'] ) );
+        $h_weight    = (int) $design['style_heading_weight'];
+        $b_size      = max( 10, min( 48, (int) $design['style_body_size'] ) );
+        $b_weight    = (int) $design['style_body_weight'];
 
-        // Optional popup background image (cover). cover/position/repeat live in
-        // popup.css on .aqm-popup-built--bg; only the URL is injected here.
-        $bg_image_id  = (int) $settings['style_bg_image_id'];
+        // Background image + optional overlay tint.
+        $bg_image_id  = (int) $design['style_bg_image_id'];
         $bg_image_url = $bg_image_id > 0 ? wp_get_attachment_image_url( $bg_image_id, 'large' ) : '';
+        $ov_color     = $this->safe_hex( $design['style_bg_overlay_color'], '#000000' );
+        $ov_opacity   = min( 1, max( 0, (float) $design['style_bg_overlay_opacity'] ) );
 
-        // Optional tint laid over the background image (behind the content) for
-        // text legibility. Implemented as a flat gradient layered above the image
-        // in the same background-image property — no extra element needed.
-        $ov_color   = $this->safe_hex( $settings['style_bg_overlay_color'], '#000000' );
-        $ov_opacity = min( 1, max( 0, (float) $settings['style_bg_overlay_opacity'] ) );
+        $justify = ( 'center' === $valign ) ? 'center' : ( ( 'bottom' === $valign ) ? 'flex-end' : 'flex-start' );
 
         $inline_rules   = array();
         $inline_rules[] = sprintf(
@@ -183,20 +214,19 @@ class AQM_Popup_Display {
             $close_color,
             $close_radius
         );
-        $inline_rules[] = sprintf(
-            '#aqm-popup-close .aqm-popup-close-icon{width:%1$dpx;height:%1$dpx}',
-            $close_icon_sz
-        );
+        $inline_rules[] = sprintf( '#aqm-popup-close .aqm-popup-close-icon{width:%1$dpx;height:%1$dpx}', $close_icon_sz );
 
-        // Container: width only. It stays overflow:visible (popup.css) so the
-        // close button can be positioned OUTSIDE the popup with a negative
-        // offset without being clipped.
+        // Container width only; stays overflow:visible so an outside close button isn't clipped.
         $inline_rules[] = sprintf( '#aqm-popup-container{width:min(%dpx,94vw)}', $max_width );
 
-        // Popup body styling. Border + radius go on the card itself, not the
-        // container, so the container never clips an outside close button. The
-        // card already has overflow-y:auto, which clips its image to the radius.
-        $built_decls = sprintf( 'background-color:%1$s;color:%2$s;text-align:%3$s', $body_bg, $body_text, $align );
+        // Card styling.
+        $built_decls = sprintf( 'background-color:%1$s;color:%2$s;text-align:%3$s;justify-content:%4$s', $body_bg, $body_text, $align, $justify );
+        if ( $min_height > 0 ) {
+            $built_decls .= sprintf( ';min-height:%dpx', $min_height );
+        }
+        if ( '' !== $font_stack ) {
+            $built_decls .= ';font-family:' . $font_stack;
+        }
         if ( '' !== $bg_image_url ) {
             $img_layer = sprintf( 'url(%s)', esc_url( $bg_image_url ) );
             if ( $ov_opacity > 0 ) {
@@ -215,19 +245,14 @@ class AQM_Popup_Display {
             $built_decls .= sprintf( ';border-radius:%dpx', $popup_radius );
         }
         $inline_rules[] = sprintf( '#aqm-popup-content .aqm-popup-built{%s}', $built_decls );
-        $inline_rules[] = sprintf(
-            '#aqm-popup-content .aqm-popup-built__body{padding:%dpx}',
-            $padding
-        );
-        $inline_rules[] = sprintf(
-            '#aqm-popup-content .aqm-popup-built__btn{background:%1$s;color:%2$s}',
-            $btn_bg,
-            $btn_text
-        );
+        $inline_rules[] = sprintf( '#aqm-popup-content .aqm-popup-built__body{padding:%dpx}', $padding );
+        $inline_rules[] = sprintf( '#aqm-popup-content .aqm-popup-built__heading{font-size:%1$dpx;font-weight:%2$d}', $h_size, $h_weight );
+        $inline_rules[] = sprintf( '#aqm-popup-content .aqm-popup-built__text{font-size:%1$dpx;font-weight:%2$d}', $b_size, $b_weight );
+        $inline_rules[] = sprintf( '#aqm-popup-content .aqm-popup-built__btn{background:%1$s;color:%2$s}', $btn_bg, $btn_text );
 
-        echo '<style id="aqm-popup-inline-style">' . implode( '', $inline_rules ) . '</style>'; // phpcs:ignore WordPress.Security.EscapeOutput -- values are validated hex colors + clamped ints + enum align in the admin sanitize callback and re-validated here.
+        echo '<style id="aqm-popup-inline-style">' . implode( '', $inline_rules ) . '</style>'; // phpcs:ignore WordPress.Security.EscapeOutput -- values are validated hex/ints/enums + esc_url'd image URL + registry font stacks.
         ?>
-        <div id="aqm-popup-overlay" class="<?php echo esc_attr( implode( ' ', $overlay_classes ) ); ?>" hidden role="dialog" aria-modal="true" aria-label="<?php esc_attr_e( 'Popup', 'aqm-popup' ); ?>" style="<?php echo esc_attr( $style_overlay ); ?>">
+        <div id="aqm-popup-overlay" class="aqm-popup-overlay" hidden role="dialog" aria-modal="true" aria-label="<?php esc_attr_e( 'Popup', 'aqm-popup' ); ?>" style="<?php echo esc_attr( $style_overlay ); ?>">
             <div id="aqm-popup-container" class="aqm-popup-container">
                 <button type="button" id="aqm-popup-close" class="aqm-popup-close" aria-label="<?php esc_attr_e( 'Close', 'aqm-popup' ); ?>">
                     <svg class="aqm-popup-close-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false">
@@ -235,7 +260,7 @@ class AQM_Popup_Display {
                     </svg>
                 </button>
                 <div id="aqm-popup-content" class="aqm-popup-content">
-                    <?php echo $content; // phpcs:ignore WordPress.Security.EscapeOutput -- $content is assembled in build_content() entirely from escaped pieces (esc_html / esc_url / wp_get_attachment_image). ?>
+                    <?php echo $content; // phpcs:ignore WordPress.Security.EscapeOutput -- $content is assembled in build_content() entirely from escaped pieces. ?>
                 </div>
             </div>
         </div>
@@ -243,18 +268,17 @@ class AQM_Popup_Display {
     }
 
     /**
-     * Assemble the popup body HTML from the saved content fields. Every dynamic
-     * value is escaped at the point of output, so the returned string is safe to
-     * echo directly.
+     * Assemble the popup body from a design's content fields. Every dynamic
+     * value is escaped at output, so the result is safe to echo.
      */
-    private function build_content( $settings ) {
-        $image_id    = (int) $settings['content_image_id'];
-        $bg_image_id = (int) $settings['style_bg_image_id'];
-        $heading     = trim( (string) $settings['content_heading'] );
-        $body        = trim( (string) $settings['content_body'] );
-        $label       = trim( (string) $settings['content_button_label'] );
-        $url         = trim( (string) $settings['content_button_url'] );
-        $new_tab     = ! empty( $settings['content_button_new_tab'] );
+    private function build_content( $design ) {
+        $image_id    = (int) $design['content_image_id'];
+        $bg_image_id = (int) $design['style_bg_image_id'];
+        $heading     = trim( (string) $design['content_heading'] );
+        $body        = trim( (string) $design['content_body'] );
+        $label       = trim( (string) $design['content_button_label'] );
+        $url         = trim( (string) $design['content_button_url'] );
+        $new_tab     = ! empty( $design['content_button_new_tab'] );
 
         $parts = '';
 
@@ -283,8 +307,6 @@ class AQM_Popup_Display {
             $parts .= '<div class="aqm-popup-built__body">' . $inner . '</div>';
         }
 
-        // A background image alone is enough to render (it gets a min-height in
-        // CSS so it stays visible even with no text on top).
         if ( '' === $parts && $bg_image_id <= 0 ) {
             return '';
         }
@@ -296,10 +318,11 @@ class AQM_Popup_Display {
         return '<div class="' . esc_attr( $classes ) . '">' . $parts . '</div>';
     }
 
-    /**
-     * Re-validate a stored hex color at render time. Returns #rrggbb or the
-     * fallback. Defensive: settings are already sanitized on save.
-     */
+    private function one_of( $value, $allowed, $fallback ) {
+        $value = is_string( $value ) ? $value : '';
+        return in_array( $value, $allowed, true ) ? $value : $fallback;
+    }
+
     private function hex_to_rgb( $hex ) {
         $hex = ltrim( (string) $hex, '#' );
         if ( 6 !== strlen( $hex ) ) {

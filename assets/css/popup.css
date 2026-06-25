@@ -61,6 +61,11 @@
     max-height: var(--aqm-popup-max-h, 92vh);
     overflow-y: auto;
     background: #ffffff;
+    /* Flex column lets the inline `justify-content` (set by the display class)
+       vertically align the content when the popup is taller than its content
+       (e.g. with a Minimum height or background image). */
+    display: flex;
+    flex-direction: column;
 }
 
 /*

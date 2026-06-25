@@ -3,7 +3,7 @@
 Plugin Name: AQM Popup
 Plugin URI: https://aqmarketing.com/
 Description: Site-wide popup builder. Compose the popup (image, headline, text, button) right in the settings, with configurable triggers (time delay, scroll depth, exit intent, click on element), per-session show cap, and post-dismissal cooldown.
-Version: 1.1.2
+Version: 1.2.0
 Author: AQ Marketing
 Author URI: https://aqmarketing.com/
 GitHub Plugin URI: https://github.com/AQ-Marketing/aqm-popup
@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'AQM_POPUP_VERSION', '1.1.2' );
+define( 'AQM_POPUP_VERSION', '1.2.0' );
 define( 'AQM_POPUP_FILE', __FILE__ );
 define( 'AQM_POPUP_PATH', plugin_dir_path( __FILE__ ) );
 define( 'AQM_POPUP_URL', plugin_dir_url( __FILE__ ) );
@@ -36,9 +36,16 @@ function aqm_popup_debug_log( $message ) {
     }
 }
 
-function aqm_popup_default_settings() {
+/**
+ * Defaults for a single design (a full preset: content, style, triggers,
+ * frequency, behavior, close icon, plus name + schedule).
+ */
+function aqm_popup_design_defaults() {
     return array(
-        'enabled'                 => false,
+        'name'        => __( 'Untitled design', 'aqm-popup' ),
+        'archived'    => false,
+        'start_date'  => '',
+        'end_date'    => '',
 
         // Content (built in-settings — no page builder required).
         'content_image_id'        => 0,
@@ -49,17 +56,25 @@ function aqm_popup_default_settings() {
         'content_button_new_tab'  => false,
 
         // Popup body styling.
-        'style_bg_color'              => '#ffffff',
-        'style_bg_image_id'           => 0,
-        'style_bg_overlay_color'      => '#000000',
-        'style_bg_overlay_opacity'    => 0,
-        'style_text_color'            => '#1d2327',
-        'style_button_bg'         => '#c10f30',
-        'style_button_text_color' => '#ffffff',
-        'style_max_width'         => 480,
-        'style_padding'           => 32,
-        'style_align'             => 'center',
+        'style_bg_color'           => '#ffffff',
+        'style_bg_image_id'        => 0,
+        'style_bg_overlay_color'   => '#000000',
+        'style_bg_overlay_opacity' => 0,
+        'style_text_color'         => '#1d2327',
+        'style_button_bg'          => '#c10f30',
+        'style_button_text_color'  => '#ffffff',
+        'style_max_width'          => 480,
+        'style_min_height'         => 0,
+        'style_padding'            => 32,
+        'style_align'              => 'center',
+        'style_vertical_align'     => 'top',
+        'style_font_family'        => '',
+        'style_heading_size'       => 28,
+        'style_heading_weight'     => 700,
+        'style_body_size'          => 16,
+        'style_body_weight'        => 400,
 
+        // Triggers.
         'trigger_delay_enabled'   => false,
         'trigger_delay_seconds'   => 10,
         'trigger_scroll_enabled'  => false,
@@ -67,37 +82,206 @@ function aqm_popup_default_settings() {
         'trigger_exit_enabled'    => false,
         'trigger_click_enabled'   => false,
         'trigger_click_selector'  => '',
+
+        // Frequency.
         'max_per_session'         => 1,
         'cooldown_days'           => 7,
+
+        // Behavior.
         'close_on_overlay_click'  => true,
         'close_on_esc'            => true,
         'overlay_opacity'         => 0.7,
         'overlay_padding_vertical'   => 0,
         'overlay_padding_horizontal' => 0,
+        'popup_border'            => '',
+        'popup_border_radius_px'  => 0,
+
+        // Close icon.
         'close_size_px'           => 36,
         'close_offset_px'         => 10,
         'close_background'        => 'transparent',
         'close_icon_color'        => '#ffffff',
         'close_border_radius_px'  => 0,
-        'popup_border'            => '',
-        'popup_border_radius_px'  => 0,
-        'test_mode_enabled'       => false,
-        'test_mode_page_id'       => 0,
     );
 }
 
-function aqm_popup_get_settings() {
-    $stored = get_option( 'aqm_popup_settings', array() );
-    if ( ! is_array( $stored ) ) {
-        $stored = array();
+/**
+ * Top-level defaults: a library of designs, a manually-active design, plus
+ * global flags (master enable, test mode).
+ */
+function aqm_popup_default_settings() {
+    $id            = 'd1';
+    $design        = aqm_popup_design_defaults();
+    $design['name'] = __( 'Design 1', 'aqm-popup' );
+    return array(
+        'schema'            => 2,
+        'enabled'           => false,
+        'active'            => $id,
+        'order'             => array( $id ),
+        'designs'           => array( $id => $design ),
+        'test_mode_enabled' => false,
+        'test_mode_page_id' => 0,
+    );
+}
+
+/**
+ * Migrate the old flat (v1) settings into the v2 designs structure: the whole
+ * flat config becomes "Design 1" and is made active. Global flags lift out.
+ */
+function aqm_popup_migrate_v1( $old ) {
+    $design          = aqm_popup_design_defaults();
+    $design['name']  = __( 'Design 1', 'aqm-popup' );
+    $skip            = array( 'name', 'archived', 'start_date', 'end_date' );
+    foreach ( array_keys( aqm_popup_design_defaults() ) as $k ) {
+        if ( in_array( $k, $skip, true ) ) {
+            continue;
+        }
+        if ( isset( $old[ $k ] ) ) {
+            $design[ $k ] = $old[ $k ];
+        }
     }
-    return array_merge( aqm_popup_default_settings(), $stored );
+    return array(
+        'schema'            => 2,
+        'enabled'           => ! empty( $old['enabled'] ),
+        'active'            => 'd1',
+        'order'             => array( 'd1' ),
+        'designs'           => array( 'd1' => $design ),
+        'test_mode_enabled' => ! empty( $old['test_mode_enabled'] ),
+        'test_mode_page_id' => isset( $old['test_mode_page_id'] ) ? (int) $old['test_mode_page_id'] : 0,
+    );
+}
+
+/**
+ * Normalize stored settings to the v2 structure (idempotent). Migrates v1 data
+ * in memory, fills defaults, and guarantees a valid active id + order.
+ */
+function aqm_popup_normalize_settings( $stored ) {
+    if ( empty( $stored ) || ! is_array( $stored ) ) {
+        return aqm_popup_default_settings();
+    }
+    if ( empty( $stored['schema'] ) || (int) $stored['schema'] < 2 || ! isset( $stored['designs'] ) ) {
+        $stored = aqm_popup_migrate_v1( $stored );
+    }
+
+    $top_defaults = array(
+        'schema'            => 2,
+        'enabled'           => false,
+        'active'            => '',
+        'order'             => array(),
+        'designs'           => array(),
+        'test_mode_enabled' => false,
+        'test_mode_page_id' => 0,
+    );
+    $s = array_merge( $top_defaults, $stored );
+
+    if ( ! is_array( $s['designs'] ) || empty( $s['designs'] ) ) {
+        $def              = aqm_popup_default_settings();
+        $s['designs']     = $def['designs'];
+        $s['order']       = $def['order'];
+        $s['active']      = $def['active'];
+    }
+
+    $design_defaults = aqm_popup_design_defaults();
+    $clean           = array();
+    foreach ( $s['designs'] as $id => $design ) {
+        if ( ! is_array( $design ) ) {
+            continue;
+        }
+        $clean[ (string) $id ] = array_merge( $design_defaults, $design );
+    }
+    $s['designs'] = $clean;
+
+    // Order lists exactly the existing design ids, in a stable sequence.
+    $order = array();
+    if ( is_array( $s['order'] ) ) {
+        foreach ( $s['order'] as $id ) {
+            $id = (string) $id;
+            if ( isset( $clean[ $id ] ) && ! in_array( $id, $order, true ) ) {
+                $order[] = $id;
+            }
+        }
+    }
+    foreach ( array_keys( $clean ) as $id ) {
+        if ( ! in_array( $id, $order, true ) ) {
+            $order[] = $id;
+        }
+    }
+    $s['order'] = $order;
+
+    if ( ! isset( $clean[ $s['active'] ] ) ) {
+        $s['active'] = $order ? $order[0] : '';
+    }
+
+    $s['enabled']           = ! empty( $s['enabled'] );
+    $s['test_mode_enabled'] = ! empty( $s['test_mode_enabled'] );
+    $s['test_mode_page_id'] = (int) $s['test_mode_page_id'];
+    $s['schema']            = 2;
+
+    return $s;
+}
+
+/**
+ * Full structured settings (always v2-normalized).
+ */
+function aqm_popup_get_settings() {
+    return aqm_popup_normalize_settings( get_option( 'aqm_popup_settings', array() ) );
+}
+
+/**
+ * One design's fields (merged with design defaults). Defaults to the active
+ * design. Returns design defaults if the id is unknown.
+ */
+function aqm_popup_get_design_settings( $id = null ) {
+    $s = aqm_popup_get_settings();
+    if ( null === $id || '' === $id ) {
+        $id = $s['active'];
+    }
+    if ( isset( $s['designs'][ $id ] ) ) {
+        return $s['designs'][ $id ];
+    }
+    return aqm_popup_design_defaults();
+}
+
+/**
+ * Font registry. Key => label + CSS stack + Google Fonts family param ('' for
+ * the theme-default / no-Google option). Shared by the admin, preview, and
+ * frontend so font choices stay consistent.
+ */
+function aqm_popup_fonts() {
+    return array(
+        ''             => array( 'label' => __( 'Theme default', 'aqm-popup' ), 'stack' => '',                          'google' => '' ),
+        'inter'        => array( 'label' => 'Inter',                            'stack' => "'Inter', sans-serif",        'google' => 'Inter:wght@400;500;600;700;800' ),
+        'poppins'      => array( 'label' => 'Poppins',                          'stack' => "'Poppins', sans-serif",      'google' => 'Poppins:wght@400;500;600;700;800' ),
+        'montserrat'   => array( 'label' => 'Montserrat',                       'stack' => "'Montserrat', sans-serif",   'google' => 'Montserrat:wght@400;500;600;700;800' ),
+        'roboto'       => array( 'label' => 'Roboto',                           'stack' => "'Roboto', sans-serif",       'google' => 'Roboto:wght@400;500;700;900' ),
+        'lato'         => array( 'label' => 'Lato',                             'stack' => "'Lato', sans-serif",         'google' => 'Lato:wght@400;700;900' ),
+        'opensans'     => array( 'label' => 'Open Sans',                        'stack' => "'Open Sans', sans-serif",    'google' => 'Open+Sans:wght@400;500;600;700;800' ),
+        'playfair'     => array( 'label' => 'Playfair Display',                 'stack' => "'Playfair Display', serif",  'google' => 'Playfair+Display:wght@400;500;600;700;800' ),
+        'merriweather' => array( 'label' => 'Merriweather',                     'stack' => "'Merriweather', serif",      'google' => 'Merriweather:wght@400;700;900' ),
+    );
+}
+
+function aqm_popup_font_stack( $key ) {
+    $fonts = aqm_popup_fonts();
+    return isset( $fonts[ $key ] ) ? $fonts[ $key ]['stack'] : '';
+}
+
+function aqm_popup_google_font_url( $key ) {
+    $fonts = aqm_popup_fonts();
+    if ( empty( $key ) || empty( $fonts[ $key ] ) || empty( $fonts[ $key ]['google'] ) ) {
+        return '';
+    }
+    return 'https://fonts.googleapis.com/css2?family=' . $fonts[ $key ]['google'] . '&display=swap';
 }
 
 register_activation_hook( __FILE__, 'aqm_popup_activate' );
 function aqm_popup_activate() {
-    if ( false === get_option( 'aqm_popup_settings', false ) ) {
+    $stored = get_option( 'aqm_popup_settings', false );
+    if ( false === $stored ) {
         add_option( 'aqm_popup_settings', aqm_popup_default_settings() );
+    } else {
+        // Persist the migrated structure once so saves/edits work cleanly.
+        update_option( 'aqm_popup_settings', aqm_popup_normalize_settings( $stored ) );
     }
 }
 

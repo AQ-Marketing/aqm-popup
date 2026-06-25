@@ -9,6 +9,7 @@ class AQM_Popup_Admin {
 
     private static $instance = null;
     private $hook_suffix     = '';
+    private $editing_id      = '';
 
     public static function get_instance() {
         if ( null === self::$instance ) {
@@ -23,6 +24,7 @@ class AQM_Popup_Admin {
         add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
         add_filter( 'plugin_action_links_' . AQM_POPUP_BASENAME, array( $this, 'plugin_action_links' ) );
         add_action( 'wp_ajax_aqm_popup_check_updates', array( $this, 'ajax_check_updates' ) );
+        add_action( 'admin_post_aqm_popup_designs', array( $this, 'handle_design_action' ) );
     }
 
     public function register_menu() {
@@ -44,11 +46,45 @@ class AQM_Popup_Admin {
         return $links;
     }
 
+    /* ----------------------------------------------------------------
+     * Which design is being edited (from ?design=, default = active).
+     * ---------------------------------------------------------------- */
+    private function current_design_id() {
+        if ( '' !== $this->editing_id ) {
+            return $this->editing_id;
+        }
+        $s  = aqm_popup_get_settings();
+        $id = isset( $_GET['design'] ) ? sanitize_text_field( wp_unslash( $_GET['design'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only selection of which design to display.
+        if ( '' === $id || ! isset( $s['designs'][ $id ] ) ) {
+            $id = $s['active'];
+        }
+        $this->editing_id = $id;
+        return $id;
+    }
+
+    private function editing() {
+        return aqm_popup_get_design_settings( $this->current_design_id() );
+    }
+
+    private function fname( $key, $global = false ) {
+        return $global
+            ? self::OPTION_KEY . '[' . $key . ']'
+            : self::OPTION_KEY . '[design][' . $key . ']';
+    }
+
+    private function fval( $key, $global = false, $default = '' ) {
+        if ( $global ) {
+            $s = aqm_popup_get_settings();
+            return isset( $s[ $key ] ) ? $s[ $key ] : $default;
+        }
+        $d = $this->editing();
+        return isset( $d[ $key ] ) ? $d[ $key ] : $default;
+    }
+
     public function enqueue_assets( $hook ) {
         if ( $hook !== $this->hook_suffix ) {
             return;
         }
-        // Media library picker for the popup image field.
         wp_enqueue_media();
         wp_enqueue_style(
             'aqm-popup-admin',
@@ -57,24 +93,15 @@ class AQM_Popup_Admin {
             AQM_POPUP_VERSION
         );
 
-        // Animation libraries (GSAP core + three.js) for the branded header and
-        // motion. Loaded from cdnjs; the UI script checks `window.gsap` /
-        // `window.THREE` before use, so a blocked CDN degrades to a clean,
-        // fully functional static page.
-        wp_enqueue_script(
-            'aqm-popup-gsap',
-            'https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js',
-            array(),
-            '3.12.5',
-            true
-        );
-        wp_enqueue_script(
-            'aqm-popup-three',
-            'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js',
-            array(),
-            'r128',
-            true
-        );
+        // Google Font for the design being edited, so the preview is accurate.
+        $editing  = $this->editing();
+        $font_url = aqm_popup_google_font_url( isset( $editing['style_font_family'] ) ? $editing['style_font_family'] : '' );
+        if ( $font_url ) {
+            wp_enqueue_style( 'aqm-popup-admin-font', $font_url, array(), null ); // phpcs:ignore WordPress.WP.EnqueuedResourceParameters.MissingVersion -- Google Fonts URL is versionless.
+        }
+
+        wp_enqueue_script( 'aqm-popup-gsap', 'https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js', array(), '3.12.5', true );
+        wp_enqueue_script( 'aqm-popup-three', 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js', array(), 'r128', true );
 
         wp_enqueue_script(
             'aqm-popup-admin',
@@ -92,8 +119,6 @@ class AQM_Popup_Admin {
             ),
         ) );
 
-        // Redesign behaviors: scroll-spy nav, live preview, three.js header,
-        // GSAP reveals. Depends on the libraries above (loads after them).
         wp_enqueue_script(
             'aqm-popup-admin-ui',
             AQM_POPUP_URL . 'assets/js/admin-ui.js',
@@ -101,8 +126,15 @@ class AQM_Popup_Admin {
             AQM_POPUP_VERSION,
             true
         );
+
+        // Font stacks map for the live preview (key => CSS family).
+        $font_stacks = array();
+        foreach ( aqm_popup_fonts() as $k => $f ) {
+            $font_stacks[ $k ] = $f['stack'];
+        }
         wp_localize_script( 'aqm-popup-admin-ui', 'aqmPopupUi', array(
-            'i18n' => array(
+            'fonts' => $font_stacks,
+            'i18n'  => array(
                 'enabled'      => __( 'Live', 'aqm-popup' ),
                 'disabled'     => __( 'Off', 'aqm-popup' ),
                 'testMode'     => __( 'Test mode', 'aqm-popup' ),
@@ -126,14 +158,14 @@ class AQM_Popup_Admin {
             )
         );
 
-        add_settings_section(
-            'aqm_popup_content',
-            __( 'Content', 'aqm-popup' ),
-            array( $this, 'section_content_text' ),
-            self::PAGE_SLUG
-        );
+        // ---- This design (name + schedule) ----
+        add_settings_section( 'aqm_popup_design_meta', __( 'This design', 'aqm-popup' ), array( $this, 'section_design_meta_text' ), self::PAGE_SLUG );
+        add_settings_field( 'name',       __( 'Design name', 'aqm-popup' ), array( $this, 'field_text' ), self::PAGE_SLUG, 'aqm_popup_design_meta', array( 'key' => 'name', 'placeholder' => __( 'e.g. Spring sale', 'aqm-popup' ) ) );
+        add_settings_field( 'start_date', __( 'Start date', 'aqm-popup' ),  array( $this, 'field_date' ), self::PAGE_SLUG, 'aqm_popup_design_meta', array( 'key' => 'start_date', 'description' => __( 'Optional. The active popup will not show before this date (your site timezone). Leave empty for no start limit.', 'aqm-popup' ) ) );
+        add_settings_field( 'end_date',   __( 'End date', 'aqm-popup' ),    array( $this, 'field_date' ), self::PAGE_SLUG, 'aqm_popup_design_meta', array( 'key' => 'end_date', 'description' => __( 'Optional. The active popup stops showing after this date (end of day, site timezone). Leave empty for no end.', 'aqm-popup' ) ) );
 
-        add_settings_field( 'enabled',                __( 'Enable popup', 'aqm-popup' ),        array( $this, 'field_checkbox' ), self::PAGE_SLUG, 'aqm_popup_content', array( 'key' => 'enabled', 'description' => __( 'Turn the popup on for the whole site. Use Test mode below to preview before enabling.', 'aqm-popup' ) ) );
+        // ---- Content ----
+        add_settings_section( 'aqm_popup_content', __( 'Content', 'aqm-popup' ), array( $this, 'section_content_text' ), self::PAGE_SLUG );
         add_settings_field( 'content_image_id',       __( 'Image', 'aqm-popup' ),               array( $this, 'field_image' ),    self::PAGE_SLUG, 'aqm_popup_content', array( 'key' => 'content_image_id' ) );
         add_settings_field( 'content_heading',        __( 'Headline', 'aqm-popup' ),            array( $this, 'field_text' ),     self::PAGE_SLUG, 'aqm_popup_content', array( 'key' => 'content_heading', 'placeholder' => __( 'e.g. Spring sale — 20% off', 'aqm-popup' ) ) );
         add_settings_field( 'content_body',           __( 'Text', 'aqm-popup' ),                array( $this, 'field_textarea' ), self::PAGE_SLUG, 'aqm_popup_content', array( 'key' => 'content_body', 'description' => __( 'A short paragraph. Line breaks are preserved.', 'aqm-popup' ) ) );
@@ -141,141 +173,126 @@ class AQM_Popup_Admin {
         add_settings_field( 'content_button_url',     __( 'Button link', 'aqm-popup' ),         array( $this, 'field_text' ),     self::PAGE_SLUG, 'aqm_popup_content', array( 'key' => 'content_button_url', 'placeholder' => 'https://', 'input_type' => 'url' ) );
         add_settings_field( 'content_button_new_tab', __( 'Open link in new tab', 'aqm-popup' ), array( $this, 'field_checkbox' ), self::PAGE_SLUG, 'aqm_popup_content', array( 'key' => 'content_button_new_tab' ) );
 
-        add_settings_section(
-            'aqm_popup_style',
-            __( 'Popup style', 'aqm-popup' ),
-            array( $this, 'section_style_text' ),
-            self::PAGE_SLUG
-        );
-
+        // ---- Popup style ----
+        add_settings_section( 'aqm_popup_style', __( 'Popup style', 'aqm-popup' ), array( $this, 'section_style_text' ), self::PAGE_SLUG );
         add_settings_field( 'style_bg_color',          __( 'Background color', 'aqm-popup' ),    array( $this, 'field_color' ),  self::PAGE_SLUG, 'aqm_popup_style', array( 'key' => 'style_bg_color' ) );
-        add_settings_field( 'style_bg_image_id',       __( 'Background image', 'aqm-popup' ),    array( $this, 'field_image' ),  self::PAGE_SLUG, 'aqm_popup_style', array( 'key' => 'style_bg_image_id', 'description' => __( 'Optional. Fills the whole popup behind your text and button (scaled to cover). The background color shows while it loads, or if you remove it. For readable text over a photo, set the text color to contrast.', 'aqm-popup' ) ) );
+        add_settings_field( 'style_bg_image_id',       __( 'Background image', 'aqm-popup' ),    array( $this, 'field_image' ),  self::PAGE_SLUG, 'aqm_popup_style', array( 'key' => 'style_bg_image_id', 'description' => __( 'Optional. Fills the whole popup behind your text and button (scaled to cover). The background color shows while it loads, or if you remove it.', 'aqm-popup' ) ) );
         add_settings_field( 'style_bg_overlay_color',   __( 'Image overlay color', 'aqm-popup' ),  array( $this, 'field_color' ),  self::PAGE_SLUG, 'aqm_popup_style', array( 'key' => 'style_bg_overlay_color' ) );
-        add_settings_field( 'style_bg_overlay_opacity', __( 'Image overlay opacity', 'aqm-popup' ),array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_style', array( 'key' => 'style_bg_overlay_opacity', 'min' => 0, 'max' => 1, 'step' => '0.05', 'description' => __( 'A tint laid OVER the background image (behind your text) so text stays readable. 0 = no overlay. Try the overlay color black at 0.4 to darken a photo. Only applies when a background image is set; this is separate from the dark backdrop in Behavior.', 'aqm-popup' ) ) );
+        add_settings_field( 'style_bg_overlay_opacity', __( 'Image overlay opacity', 'aqm-popup' ),array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_style', array( 'key' => 'style_bg_overlay_opacity', 'min' => 0, 'max' => 1, 'step' => '0.05', 'description' => __( 'A tint laid OVER the background image (behind your text) so text stays readable. 0 = no overlay. Only applies when a background image is set.', 'aqm-popup' ) ) );
         add_settings_field( 'style_text_color',        __( 'Text color', 'aqm-popup' ),          array( $this, 'field_color' ),  self::PAGE_SLUG, 'aqm_popup_style', array( 'key' => 'style_text_color' ) );
         add_settings_field( 'style_button_bg',         __( 'Button color', 'aqm-popup' ),        array( $this, 'field_color' ),  self::PAGE_SLUG, 'aqm_popup_style', array( 'key' => 'style_button_bg' ) );
         add_settings_field( 'style_button_text_color', __( 'Button text color', 'aqm-popup' ),   array( $this, 'field_color' ),  self::PAGE_SLUG, 'aqm_popup_style', array( 'key' => 'style_button_text_color' ) );
         add_settings_field( 'style_max_width',         __( 'Max width (px)', 'aqm-popup' ),      array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_style', array( 'key' => 'style_max_width', 'min' => 240, 'max' => 1200, 'step' => 10, 'description' => __( 'How wide the popup can grow on larger screens.', 'aqm-popup' ) ) );
+        add_settings_field( 'style_min_height',        __( 'Minimum height (px)', 'aqm-popup' ), array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_style', array( 'key' => 'style_min_height', 'min' => 0, 'max' => 1200, 'step' => 10, 'description' => __( 'Force the popup to be at least this tall. Needed for vertical centering to have room to work. 0 = fit content.', 'aqm-popup' ) ) );
         add_settings_field( 'style_padding',           __( 'Inner padding (px)', 'aqm-popup' ),  array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_style', array( 'key' => 'style_padding', 'min' => 0, 'max' => 96, 'step' => 1, 'description' => __( 'Space between the popup edge and the text/button. The image sits flush at the top.', 'aqm-popup' ) ) );
-        add_settings_field( 'style_align',             __( 'Text alignment', 'aqm-popup' ),      array( $this, 'field_select' ), self::PAGE_SLUG, 'aqm_popup_style', array( 'key' => 'style_align', 'options' => array( 'left' => __( 'Left', 'aqm-popup' ), 'center' => __( 'Center', 'aqm-popup' ) ) ) );
+        add_settings_field( 'style_align',             __( 'Text alignment', 'aqm-popup' ),      array( $this, 'field_select' ), self::PAGE_SLUG, 'aqm_popup_style', array( 'key' => 'style_align', 'options' => array( 'left' => __( 'Left', 'aqm-popup' ), 'center' => __( 'Center', 'aqm-popup' ), 'right' => __( 'Right', 'aqm-popup' ) ) ) );
+        add_settings_field( 'style_vertical_align',    __( 'Vertical alignment', 'aqm-popup' ),  array( $this, 'field_select' ), self::PAGE_SLUG, 'aqm_popup_style', array( 'key' => 'style_vertical_align', 'options' => array( 'top' => __( 'Top', 'aqm-popup' ), 'center' => __( 'Center', 'aqm-popup' ), 'bottom' => __( 'Bottom', 'aqm-popup' ) ), 'description' => __( 'Where the content sits within the popup. Center/Bottom only differ from Top when the popup is taller than its content (e.g. with a Minimum height or background image).', 'aqm-popup' ) ) );
 
-        add_settings_section(
-            'aqm_popup_triggers',
-            __( 'Triggers', 'aqm-popup' ),
-            array( $this, 'section_triggers_text' ),
-            self::PAGE_SLUG
-        );
+        // ---- Typography ----
+        add_settings_section( 'aqm_popup_type', __( 'Typography', 'aqm-popup' ), array( $this, 'section_type_text' ), self::PAGE_SLUG );
+        $font_options = array();
+        foreach ( aqm_popup_fonts() as $k => $f ) {
+            $font_options[ $k ] = $f['label'];
+        }
+        $weight_options = array( '400' => __( 'Normal (400)', 'aqm-popup' ), '500' => __( 'Medium (500)', 'aqm-popup' ), '600' => __( 'Semibold (600)', 'aqm-popup' ), '700' => __( 'Bold (700)', 'aqm-popup' ), '800' => __( 'Extrabold (800)', 'aqm-popup' ) );
+        add_settings_field( 'style_font_family',   __( 'Font', 'aqm-popup' ),          array( $this, 'field_select' ), self::PAGE_SLUG, 'aqm_popup_type', array( 'key' => 'style_font_family', 'options' => $font_options, 'description' => __( 'Google Fonts load automatically on the front end. "Theme default" uses your site\'s existing font (no extra request).', 'aqm-popup' ) ) );
+        add_settings_field( 'style_heading_size',  __( 'Headline size (px)', 'aqm-popup' ),  array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_type', array( 'key' => 'style_heading_size', 'min' => 10, 'max' => 96, 'step' => 1 ) );
+        add_settings_field( 'style_heading_weight',__( 'Headline weight', 'aqm-popup' ),      array( $this, 'field_select' ), self::PAGE_SLUG, 'aqm_popup_type', array( 'key' => 'style_heading_weight', 'options' => $weight_options ) );
+        add_settings_field( 'style_body_size',     __( 'Text size (px)', 'aqm-popup' ),       array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_type', array( 'key' => 'style_body_size', 'min' => 10, 'max' => 48, 'step' => 1 ) );
+        add_settings_field( 'style_body_weight',   __( 'Text weight', 'aqm-popup' ),          array( $this, 'field_select' ), self::PAGE_SLUG, 'aqm_popup_type', array( 'key' => 'style_body_weight', 'options' => $weight_options ) );
 
+        // ---- Triggers ----
+        add_settings_section( 'aqm_popup_triggers', __( 'Triggers', 'aqm-popup' ), array( $this, 'section_triggers_text' ), self::PAGE_SLUG );
         add_settings_field( 'trigger_delay',  __( 'Time delay',     'aqm-popup' ), array( $this, 'field_trigger_delay' ),  self::PAGE_SLUG, 'aqm_popup_triggers' );
         add_settings_field( 'trigger_scroll', __( 'Scroll depth',   'aqm-popup' ), array( $this, 'field_trigger_scroll' ), self::PAGE_SLUG, 'aqm_popup_triggers' );
         add_settings_field( 'trigger_exit',   __( 'Exit intent',    'aqm-popup' ), array( $this, 'field_trigger_exit' ),   self::PAGE_SLUG, 'aqm_popup_triggers' );
         add_settings_field( 'trigger_click',  __( 'Click selector', 'aqm-popup' ), array( $this, 'field_trigger_click' ),  self::PAGE_SLUG, 'aqm_popup_triggers' );
 
-        add_settings_section(
-            'aqm_popup_frequency',
-            __( 'Frequency', 'aqm-popup' ),
-            array( $this, 'section_frequency_text' ),
-            self::PAGE_SLUG
-        );
-
+        // ---- Frequency ----
+        add_settings_section( 'aqm_popup_frequency', __( 'Frequency', 'aqm-popup' ), array( $this, 'section_frequency_text' ), self::PAGE_SLUG );
         add_settings_field( 'max_per_session', __( 'Max shows per session', 'aqm-popup' ),    array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_frequency', array( 'key' => 'max_per_session', 'min' => 1, 'step' => 1, 'description' => __( 'How many times the popup can appear during a single browser session.', 'aqm-popup' ) ) );
         add_settings_field( 'cooldown_days',   __( 'Cooldown after dismissal (days)', 'aqm-popup' ), array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_frequency', array( 'key' => 'cooldown_days', 'min' => 0, 'step' => '0.5', 'description' => __( 'After a visitor closes the popup, suppress it for this many days. Set to 0 to disable the cooldown.', 'aqm-popup' ) ) );
 
-        add_settings_section(
-            'aqm_popup_behavior',
-            __( 'Behavior', 'aqm-popup' ),
-            '__return_false',
-            self::PAGE_SLUG
-        );
-
+        // ---- Behavior ----
+        add_settings_section( 'aqm_popup_behavior', __( 'Behavior', 'aqm-popup' ), '__return_false', self::PAGE_SLUG );
         add_settings_field( 'close_on_overlay_click', __( 'Close on click outside', 'aqm-popup' ), array( $this, 'field_checkbox' ), self::PAGE_SLUG, 'aqm_popup_behavior', array( 'key' => 'close_on_overlay_click', 'description' => __( 'Clicking the dark overlay area dismisses the popup and starts the cooldown.', 'aqm-popup' ) ) );
         add_settings_field( 'close_on_esc',           __( 'Close on ESC key',       'aqm-popup' ), array( $this, 'field_checkbox' ), self::PAGE_SLUG, 'aqm_popup_behavior', array( 'key' => 'close_on_esc' ) );
         add_settings_field( 'overlay_opacity',        __( 'Overlay opacity',        'aqm-popup' ), array( $this, 'field_number' ),   self::PAGE_SLUG, 'aqm_popup_behavior', array( 'key' => 'overlay_opacity', 'min' => 0, 'max' => 1, 'step' => '0.05', 'description' => __( 'The dark backdrop behind the popup. Between 0 (transparent) and 1 (opaque black).', 'aqm-popup' ) ) );
-        add_settings_field( 'overlay_padding_vertical',   __( 'Overlay padding — top/bottom (px)',   'aqm-popup' ), array( $this, 'field_number' ),   self::PAGE_SLUG, 'aqm_popup_behavior', array( 'key' => 'overlay_padding_vertical',   'min' => 0, 'step' => 1, 'description' => __( 'Inset the popup vertically from the viewport edges. The dark backdrop fills the padded area (NOT a white frame). Useful for keeping the popup off the very top/bottom of small screens, or for visually centering tall content.', 'aqm-popup' ) ) );
+        add_settings_field( 'overlay_padding_vertical',   __( 'Overlay padding — top/bottom (px)',   'aqm-popup' ), array( $this, 'field_number' ),   self::PAGE_SLUG, 'aqm_popup_behavior', array( 'key' => 'overlay_padding_vertical',   'min' => 0, 'step' => 1, 'description' => __( 'Inset the popup vertically from the viewport edges. The dark backdrop fills the padded area.', 'aqm-popup' ) ) );
         add_settings_field( 'overlay_padding_horizontal', __( 'Overlay padding — left/right (px)',   'aqm-popup' ), array( $this, 'field_number' ),   self::PAGE_SLUG, 'aqm_popup_behavior', array( 'key' => 'overlay_padding_horizontal', 'min' => 0, 'step' => 1, 'description' => __( 'Inset the popup horizontally from the viewport edges. The dark backdrop fills the padded area.', 'aqm-popup' ) ) );
+        add_settings_field( 'popup_border',           __( 'Popup border',              'aqm-popup' ), array( $this, 'field_text' ),   self::PAGE_SLUG, 'aqm_popup_behavior', array( 'key' => 'popup_border',          'placeholder' => 'e.g. 5px solid #ffffff', 'description' => __( 'Optional CSS <code>border</code> shorthand applied around the whole popup. Examples: <code>5px solid #ffffff</code>, <code>2px dashed #c10f30</code>. Leave empty for no border.', 'aqm-popup' ) ) );
+        add_settings_field( 'popup_border_radius_px', __( 'Popup border radius (px)', 'aqm-popup' ), array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_behavior', array( 'key' => 'popup_border_radius_px', 'min' => 0, 'max' => 200, 'step' => 1, 'description' => __( 'Rounded corners on the popup (and the border, if set above).', 'aqm-popup' ) ) );
 
-        add_settings_section(
-            'aqm_popup_close_icon',
-            __( 'Close icon', 'aqm-popup' ),
-            array( $this, 'section_close_icon_text' ),
-            self::PAGE_SLUG
-        );
-
-        add_settings_field( 'popup_border',           __( 'Popup border',              'aqm-popup' ), array( $this, 'field_text' ),   self::PAGE_SLUG, 'aqm_popup_behavior', array( 'key' => 'popup_border',          'placeholder' => 'e.g. 5px solid #ffffff', 'description' => __( 'Optional CSS <code>border</code> shorthand applied around the whole popup. Examples: <code>5px solid #ffffff</code>, <code>2px dashed #c10f30</code>, <code>10px solid rgba(255,255,255,0.5)</code>. Leave empty for no border.', 'aqm-popup' ) ) );
-        add_settings_field( 'popup_border_radius_px', __( 'Popup border radius (px)', 'aqm-popup' ), array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_behavior', array( 'key' => 'popup_border_radius_px', 'min' => 0, 'max' => 200, 'step' => 1, 'description' => __( 'Rounded corners on the popup container (and the border, if set above).', 'aqm-popup' ) ) );
-
-        add_settings_field( 'close_size_px',          __( 'Button size (px)',         'aqm-popup' ), array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_close_icon', array( 'key' => 'close_size_px',         'min' => 16, 'max' => 200, 'step' => 1, 'description' => __( 'Width and height of the close button. The X icon scales proportionally (icon = button size × 0.5).', 'aqm-popup' ) ) );
-        add_settings_field( 'close_offset_px',        __( 'Distance from corner (px)','aqm-popup' ), array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_close_icon', array( 'key' => 'close_offset_px',       'min' => -100, 'max' => 100, 'step' => 1, 'description' => __( 'How far the button sits from the popup\'s top-right corner. Use a negative number to place it OUTSIDE the popup — e.g. -16 floats the X just past the corner.', 'aqm-popup' ) ) );
-        add_settings_field( 'close_background',       __( 'Background',                'aqm-popup' ), array( $this, 'field_text' ),   self::PAGE_SLUG, 'aqm_popup_close_icon', array( 'key' => 'close_background',      'placeholder' => 'transparent', 'description' => __( 'Any valid CSS color. Examples: <code>transparent</code> (default — bare X with a drop-shadow halo), <code>rgba(0,0,0,0.55)</code> (translucent dark circle, the v1.0.0–v1.0.9 look), <code>#ffffff</code> (solid white), <code>#000</code>.', 'aqm-popup' ) ) );
+        // ---- Close icon ----
+        add_settings_section( 'aqm_popup_close_icon', __( 'Close icon', 'aqm-popup' ), array( $this, 'section_close_icon_text' ), self::PAGE_SLUG );
+        add_settings_field( 'close_size_px',          __( 'Button size (px)',         'aqm-popup' ), array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_close_icon', array( 'key' => 'close_size_px',         'min' => 16, 'max' => 200, 'step' => 1, 'description' => __( 'Width and height of the close button. The X icon scales proportionally.', 'aqm-popup' ) ) );
+        add_settings_field( 'close_offset_px',        __( 'Distance from corner (px)','aqm-popup' ), array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_close_icon', array( 'key' => 'close_offset_px',       'min' => -100, 'max' => 100, 'step' => 1, 'description' => __( 'How far the button sits from the popup\'s top-right corner. Use a negative number to place it OUTSIDE the popup — e.g. -16.', 'aqm-popup' ) ) );
+        add_settings_field( 'close_background',       __( 'Background',                'aqm-popup' ), array( $this, 'field_text' ),   self::PAGE_SLUG, 'aqm_popup_close_icon', array( 'key' => 'close_background',      'placeholder' => 'transparent', 'description' => __( 'Any valid CSS color. Examples: <code>transparent</code>, <code>rgba(0,0,0,0.55)</code>, <code>#ffffff</code>.', 'aqm-popup' ) ) );
         add_settings_field( 'close_icon_color',       __( 'Icon color',                'aqm-popup' ), array( $this, 'field_text' ),   self::PAGE_SLUG, 'aqm_popup_close_icon', array( 'key' => 'close_icon_color',      'placeholder' => '#ffffff',     'description' => __( 'Color of the X mark. Any valid CSS color.', 'aqm-popup' ) ) );
-        add_settings_field( 'close_border_radius_px', __( 'Border radius (px)',        'aqm-popup' ), array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_close_icon', array( 'key' => 'close_border_radius_px','min' => 0, 'max' => 100, 'step' => 1, 'description' => __( 'Roundness of the background. Set to half the button size for a circle (e.g., 18 for a 36px button), 0 for a square.', 'aqm-popup' ) ) );
+        add_settings_field( 'close_border_radius_px', __( 'Border radius (px)',        'aqm-popup' ), array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_close_icon', array( 'key' => 'close_border_radius_px','min' => 0, 'max' => 100, 'step' => 1, 'description' => __( 'Roundness of the background. Half the button size = a circle; 0 = a square.', 'aqm-popup' ) ) );
 
-        add_settings_section(
-            'aqm_popup_test_mode',
-            __( 'Test mode', 'aqm-popup' ),
-            array( $this, 'section_test_mode_text' ),
-            self::PAGE_SLUG
-        );
-
-        add_settings_field( 'test_mode_enabled', __( 'Enable test mode', 'aqm-popup' ), array( $this, 'field_checkbox' ),       self::PAGE_SLUG, 'aqm_popup_test_mode', array( 'key' => 'test_mode_enabled', 'description' => __( 'While test mode is on, frequency is fully ignored (no cooldown, no session cap) and time-delay re-arms after dismissal — open the popup as many times as you need for debugging.', 'aqm-popup' ) ) );
+        // ---- Test mode (global) ----
+        add_settings_section( 'aqm_popup_test_mode', __( 'Test mode', 'aqm-popup' ), array( $this, 'section_test_mode_text' ), self::PAGE_SLUG );
+        add_settings_field( 'test_mode_enabled', __( 'Enable test mode', 'aqm-popup' ), array( $this, 'field_checkbox' ),       self::PAGE_SLUG, 'aqm_popup_test_mode', array( 'key' => 'test_mode_enabled', 'global' => true, 'description' => __( 'Preview the ACTIVE design on the selected page only. Frequency is ignored and triggers re-arm after dismissal. Site-wide setting (not per design).', 'aqm-popup' ) ) );
         add_settings_field( 'test_mode_page_id', __( 'Test page',        'aqm-popup' ), array( $this, 'field_test_mode_page' ), self::PAGE_SLUG, 'aqm_popup_test_mode' );
     }
 
+    /* ---------------- section intros ---------------- */
+    public function section_design_meta_text() {
+        echo '<p>' . esc_html__( 'You are editing one design. Use the Designs list above to switch, add, duplicate, archive, or activate a design. Dates here control when the ACTIVE design is allowed to show.', 'aqm-popup' ) . '</p>';
+    }
     public function section_content_text() {
-        echo '<p>' . esc_html__( 'Build the popup right here — no page builder needed. Add an image, a headline, a short paragraph, and an optional button. Any field you leave empty is simply skipped.', 'aqm-popup' ) . '</p>';
+        echo '<p>' . esc_html__( 'Build the popup — an image, a headline, a short paragraph, and an optional button. Any field you leave empty is simply skipped.', 'aqm-popup' ) . '</p>';
     }
-
     public function section_style_text() {
-        echo '<p>' . esc_html__( 'Colors and sizing for the popup body. Watch the live preview update as you change these.', 'aqm-popup' ) . '</p>';
+        echo '<p>' . esc_html__( 'Colors, sizing, and alignment for the popup body. Watch the live preview update as you change these.', 'aqm-popup' ) . '</p>';
     }
-
+    public function section_type_text() {
+        echo '<p>' . esc_html__( 'Choose a font and set the headline and text size + weight.', 'aqm-popup' ) . '</p>';
+    }
     public function section_triggers_text() {
         echo '<p>' . esc_html__( 'Enable any combination of triggers. The popup appears as soon as the first enabled trigger fires.', 'aqm-popup' ) . '</p>';
     }
-
     public function section_frequency_text() {
         echo '<p>' . esc_html__( 'Control how often the popup shows. Per-session count resets when the browser tab closes; cooldown persists across sessions.', 'aqm-popup' ) . '</p>';
     }
-
     public function section_close_icon_text() {
-        echo '<p>' . esc_html__( 'Style the X button that closes the popup. The button is positioned at the top-right of the popup; these settings control its appearance.', 'aqm-popup' ) . '</p>';
+        echo '<p>' . esc_html__( 'Style the X button that closes the popup.', 'aqm-popup' ) . '</p>';
     }
-
     public function section_test_mode_text() {
-        echo '<p>' . esc_html__( 'Preview the popup on a single page without affecting the live site. While test mode is on:', 'aqm-popup' ) . '</p>';
+        echo '<p>' . esc_html__( 'Preview the active design on a single page without affecting the live site. While test mode is on:', 'aqm-popup' ) . '</p>';
         echo '<ul style="list-style:disc;margin-left:20px;">';
-        echo '<li>' . esc_html__( 'The popup shows ONLY on the selected page below. All other pages are suppressed.', 'aqm-popup' ) . '</li>';
-        echo '<li>' . esc_html__( 'Frequency is fully ignored — no cooldown after dismissal, no per-session limit. The popup can be opened as many times as needed for debugging.', 'aqm-popup' ) . '</li>';
-        echo '<li>' . esc_html__( 'After dismissal, all triggers re-arm immediately (including the time-delay trigger), so reopening on the same page load is one trigger away.', 'aqm-popup' ) . '</li>';
+        echo '<li>' . esc_html__( 'The popup shows ONLY on the selected page below.', 'aqm-popup' ) . '</li>';
+        echo '<li>' . esc_html__( 'Frequency and dates are ignored — open it as many times as needed.', 'aqm-popup' ) . '</li>';
         echo '</ul>';
     }
 
+    /* ---------------- field renderers ---------------- */
     public function field_checkbox( $args ) {
-        $settings = aqm_popup_get_settings();
-        $key      = $args['key'];
-        $checked  = ! empty( $settings[ $key ] );
+        $key     = $args['key'];
+        $global  = ! empty( $args['global'] );
+        $checked = ! empty( $this->fval( $key, $global ) );
         printf(
-            '<label><input type="checkbox" name="%1$s[%2$s]" value="1" %3$s /> %4$s</label>',
-            esc_attr( self::OPTION_KEY ),
-            esc_attr( $key ),
+            '<label><input type="checkbox" name="%1$s" value="1" %2$s /> %3$s</label>',
+            esc_attr( $this->fname( $key, $global ) ),
             checked( $checked, true, false ),
             isset( $args['label'] ) ? esc_html( $args['label'] ) : ''
         );
         if ( ! empty( $args['description'] ) ) {
-            echo '<p class="description">' . esc_html( $args['description'] ) . '</p>';
+            echo '<p class="description">' . wp_kses_post( $args['description'] ) . '</p>';
         }
     }
 
     public function field_text( $args ) {
-        $settings    = aqm_popup_get_settings();
         $key         = $args['key'];
-        $value       = isset( $settings[ $key ] ) ? $settings[ $key ] : '';
+        $global      = ! empty( $args['global'] );
+        $value       = (string) $this->fval( $key, $global );
         $placeholder = isset( $args['placeholder'] ) ? $args['placeholder'] : '';
         $type        = ( isset( $args['input_type'] ) && 'url' === $args['input_type'] ) ? 'url' : 'text';
         printf(
-            '<input type="%5$s" name="%1$s[%2$s]" value="%3$s" placeholder="%4$s" class="regular-text" />',
-            esc_attr( self::OPTION_KEY ),
-            esc_attr( $key ),
+            '<input type="%5$s" name="%1$s" value="%3$s" placeholder="%4$s" class="regular-text" />',
+            esc_attr( $this->fname( $key, $global ) ),
+            '',
             esc_attr( $value ),
             esc_attr( $placeholder ),
             esc_attr( $type )
@@ -285,15 +302,26 @@ class AQM_Popup_Admin {
         }
     }
 
+    public function field_date( $args ) {
+        $key   = $args['key'];
+        $value = (string) $this->fval( $key, false );
+        printf(
+            '<input type="date" name="%1$s" value="%2$s" class="aqm-date-input" />',
+            esc_attr( $this->fname( $key, false ) ),
+            esc_attr( $value )
+        );
+        if ( ! empty( $args['description'] ) ) {
+            echo '<p class="description">' . esc_html( $args['description'] ) . '</p>';
+        }
+    }
+
     public function field_textarea( $args ) {
-        $settings    = aqm_popup_get_settings();
         $key         = $args['key'];
-        $value       = isset( $settings[ $key ] ) ? $settings[ $key ] : '';
+        $value       = (string) $this->fval( $key, false );
         $placeholder = isset( $args['placeholder'] ) ? $args['placeholder'] : '';
         printf(
-            '<textarea name="%1$s[%2$s]" rows="3" class="large-text" placeholder="%4$s">%3$s</textarea>',
-            esc_attr( self::OPTION_KEY ),
-            esc_attr( $key ),
+            '<textarea name="%1$s" rows="3" class="large-text" placeholder="%3$s">%2$s</textarea>',
+            esc_attr( $this->fname( $key, false ) ),
             esc_textarea( $value ),
             esc_attr( $placeholder )
         );
@@ -302,18 +330,36 @@ class AQM_Popup_Admin {
         }
     }
 
+    public function field_number( $args ) {
+        $key    = $args['key'];
+        $global = ! empty( $args['global'] );
+        $value  = (string) $this->fval( $key, $global );
+        $min    = isset( $args['min'] )  ? ' min="' . esc_attr( $args['min'] ) . '"'   : '';
+        $max    = isset( $args['max'] )  ? ' max="' . esc_attr( $args['max'] ) . '"'   : '';
+        $step   = isset( $args['step'] ) ? ' step="' . esc_attr( $args['step'] ) . '"' : '';
+        printf(
+            '<input type="number" name="%1$s" value="%2$s"%3$s%4$s%5$s class="small-text" />',
+            esc_attr( $this->fname( $key, $global ) ),
+            esc_attr( $value ),
+            $min,
+            $max,
+            $step
+        );
+        if ( ! empty( $args['description'] ) ) {
+            echo '<p class="description">' . esc_html( $args['description'] ) . '</p>';
+        }
+    }
+
     public function field_color( $args ) {
-        $settings = aqm_popup_get_settings();
-        $key      = $args['key'];
-        $value    = isset( $settings[ $key ] ) ? $settings[ $key ] : '';
+        $key   = $args['key'];
+        $value = (string) $this->fval( $key, false );
         if ( '' === $value || ! preg_match( '/^#[0-9a-fA-F]{6}$/', $value ) ) {
-            $defaults = aqm_popup_default_settings();
+            $defaults = aqm_popup_design_defaults();
             $value    = isset( $defaults[ $key ] ) ? $defaults[ $key ] : '#000000';
         }
         printf(
-            '<input type="color" name="%1$s[%2$s]" value="%3$s" class="aqm-color-input" />',
-            esc_attr( self::OPTION_KEY ),
-            esc_attr( $key ),
+            '<input type="color" name="%1$s" value="%2$s" class="aqm-color-input" />',
+            esc_attr( $this->fname( $key, false ) ),
             esc_attr( $value )
         );
         if ( ! empty( $args['description'] ) ) {
@@ -322,17 +368,17 @@ class AQM_Popup_Admin {
     }
 
     public function field_select( $args ) {
-        $settings = aqm_popup_get_settings();
-        $key      = $args['key'];
-        $current  = isset( $settings[ $key ] ) ? $settings[ $key ] : '';
-        $options  = isset( $args['options'] ) && is_array( $args['options'] ) ? $args['options'] : array();
+        $key     = $args['key'];
+        $global  = ! empty( $args['global'] );
+        $current = (string) $this->fval( $key, $global );
+        $options = isset( $args['options'] ) && is_array( $args['options'] ) ? $args['options'] : array();
 
-        echo '<select name="' . esc_attr( self::OPTION_KEY ) . '[' . esc_attr( $key ) . ']">';
+        echo '<select name="' . esc_attr( $this->fname( $key, $global ) ) . '">';
         foreach ( $options as $val => $label ) {
             printf(
                 '<option value="%1$s" %2$s>%3$s</option>',
                 esc_attr( $val ),
-                selected( $current, $val, false ),
+                selected( $current, (string) $val, false ),
                 esc_html( $label )
             );
         }
@@ -343,14 +389,13 @@ class AQM_Popup_Admin {
     }
 
     public function field_image( $args ) {
-        $settings = aqm_popup_get_settings();
-        $key      = isset( $args['key'] ) ? $args['key'] : 'content_image_id';
-        $id       = (int) ( isset( $settings[ $key ] ) ? $settings[ $key ] : 0 );
-        $url      = $id ? wp_get_attachment_image_url( $id, 'medium' ) : '';
-        $desc     = isset( $args['description'] ) ? $args['description'] : __( 'Optional. Sits flush at the top of the popup. Leave empty for a text-only popup.', 'aqm-popup' );
+        $key  = isset( $args['key'] ) ? $args['key'] : 'content_image_id';
+        $id   = (int) $this->fval( $key, false, 0 );
+        $url  = $id ? wp_get_attachment_image_url( $id, 'medium' ) : '';
+        $desc = isset( $args['description'] ) ? $args['description'] : __( 'Optional. Sits flush at the top of the popup. Leave empty for a text-only popup.', 'aqm-popup' );
         ?>
         <div class="aqm-image-field" data-aqm-image-field data-aqm-image-key="<?php echo esc_attr( $key ); ?>">
-            <input type="hidden" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[<?php echo esc_attr( $key ); ?>]" value="<?php echo esc_attr( $id ); ?>" data-aqm-image-input />
+            <input type="hidden" name="<?php echo esc_attr( $this->fname( $key, false ) ); ?>" value="<?php echo esc_attr( $id ); ?>" data-aqm-image-input />
             <div class="aqm-image-field__preview" data-aqm-image-preview <?php echo $url ? '' : 'hidden'; ?>>
                 <?php if ( $url ) : ?><img src="<?php echo esc_url( $url ); ?>" alt="" /><?php endif; ?>
             </div>
@@ -363,74 +408,69 @@ class AQM_Popup_Admin {
         <?php
     }
 
-    public function field_number( $args ) {
-        $settings = aqm_popup_get_settings();
-        $key      = $args['key'];
-        $value    = isset( $settings[ $key ] ) ? $settings[ $key ] : '';
-        $min      = isset( $args['min'] )  ? ' min="' . esc_attr( $args['min'] ) . '"'   : '';
-        $max      = isset( $args['max'] )  ? ' max="' . esc_attr( $args['max'] ) . '"'   : '';
-        $step     = isset( $args['step'] ) ? ' step="' . esc_attr( $args['step'] ) . '"' : '';
-        printf(
-            '<input type="number" name="%1$s[%2$s]" value="%3$s"%4$s%5$s%6$s class="small-text" />',
-            esc_attr( self::OPTION_KEY ),
-            esc_attr( $key ),
-            esc_attr( $value ),
-            $min,
-            $max,
-            $step
-        );
-        if ( ! empty( $args['description'] ) ) {
-            echo '<p class="description">' . esc_html( $args['description'] ) . '</p>';
-        }
-    }
-
     public function field_trigger_delay() {
-        $settings = aqm_popup_get_settings();
+        $d = $this->editing();
         ?>
         <label class="aqm-popup-trigger-toggle">
-            <input type="checkbox" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[trigger_delay_enabled]" value="1" <?php checked( ! empty( $settings['trigger_delay_enabled'] ) ); ?> data-aqm-trigger="delay" />
+            <input type="checkbox" name="<?php echo esc_attr( $this->fname( 'trigger_delay_enabled' ) ); ?>" value="1" <?php checked( ! empty( $d['trigger_delay_enabled'] ) ); ?> data-aqm-trigger="delay" />
             <?php esc_html_e( 'Show after a delay', 'aqm-popup' ); ?>
         </label>
         <div class="aqm-popup-trigger-sub" data-aqm-trigger-sub="delay">
             <label>
                 <?php esc_html_e( 'Delay (seconds):', 'aqm-popup' ); ?>
-                <input type="number" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[trigger_delay_seconds]" value="<?php echo esc_attr( $settings['trigger_delay_seconds'] ); ?>" min="0" step="1" class="small-text" />
+                <input type="number" name="<?php echo esc_attr( $this->fname( 'trigger_delay_seconds' ) ); ?>" value="<?php echo esc_attr( $d['trigger_delay_seconds'] ); ?>" min="0" step="1" class="small-text" />
             </label>
         </div>
         <?php
     }
 
     public function field_trigger_scroll() {
-        $settings = aqm_popup_get_settings();
+        $d = $this->editing();
         ?>
         <label class="aqm-popup-trigger-toggle">
-            <input type="checkbox" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[trigger_scroll_enabled]" value="1" <?php checked( ! empty( $settings['trigger_scroll_enabled'] ) ); ?> data-aqm-trigger="scroll" />
+            <input type="checkbox" name="<?php echo esc_attr( $this->fname( 'trigger_scroll_enabled' ) ); ?>" value="1" <?php checked( ! empty( $d['trigger_scroll_enabled'] ) ); ?> data-aqm-trigger="scroll" />
             <?php esc_html_e( 'Show after scrolling', 'aqm-popup' ); ?>
         </label>
         <div class="aqm-popup-trigger-sub" data-aqm-trigger-sub="scroll">
             <label>
                 <?php esc_html_e( 'Scroll depth (%):', 'aqm-popup' ); ?>
-                <input type="number" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[trigger_scroll_percent]" value="<?php echo esc_attr( $settings['trigger_scroll_percent'] ); ?>" min="1" max="100" step="1" class="small-text" />
+                <input type="number" name="<?php echo esc_attr( $this->fname( 'trigger_scroll_percent' ) ); ?>" value="<?php echo esc_attr( $d['trigger_scroll_percent'] ); ?>" min="1" max="100" step="1" class="small-text" />
             </label>
         </div>
         <?php
     }
 
     public function field_trigger_exit() {
-        $settings = aqm_popup_get_settings();
+        $d = $this->editing();
         ?>
         <label class="aqm-popup-trigger-toggle">
-            <input type="checkbox" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[trigger_exit_enabled]" value="1" <?php checked( ! empty( $settings['trigger_exit_enabled'] ) ); ?> data-aqm-trigger="exit" />
+            <input type="checkbox" name="<?php echo esc_attr( $this->fname( 'trigger_exit_enabled' ) ); ?>" value="1" <?php checked( ! empty( $d['trigger_exit_enabled'] ) ); ?> data-aqm-trigger="exit" />
             <?php esc_html_e( 'Show when the visitor moves to leave (desktop only)', 'aqm-popup' ); ?>
         </label>
-        <p class="description"><?php esc_html_e( 'Exit-intent detects the cursor moving toward the top of the viewport. Mobile/touch devices have no equivalent and will skip this trigger automatically.', 'aqm-popup' ); ?></p>
+        <p class="description"><?php esc_html_e( 'Exit-intent detects the cursor moving toward the top of the viewport. Mobile/touch devices skip this automatically.', 'aqm-popup' ); ?></p>
+        <?php
+    }
+
+    public function field_trigger_click() {
+        $d = $this->editing();
+        ?>
+        <label class="aqm-popup-trigger-toggle">
+            <input type="checkbox" name="<?php echo esc_attr( $this->fname( 'trigger_click_enabled' ) ); ?>" value="1" <?php checked( ! empty( $d['trigger_click_enabled'] ) ); ?> data-aqm-trigger="click" />
+            <?php esc_html_e( 'Show when a specific element is clicked', 'aqm-popup' ); ?>
+        </label>
+        <div class="aqm-popup-trigger-sub" data-aqm-trigger-sub="click">
+            <label>
+                <?php esc_html_e( 'CSS selector:', 'aqm-popup' ); ?>
+                <input type="text" name="<?php echo esc_attr( $this->fname( 'trigger_click_selector' ) ); ?>" value="<?php echo esc_attr( $d['trigger_click_selector'] ); ?>" class="regular-text" placeholder=".open-popup, #cta-button" />
+            </label>
+            <p class="description"><?php esc_html_e( 'Any standard CSS selector. Clicks on matching elements open the popup. If the element is a link, navigation is prevented.', 'aqm-popup' ); ?></p>
+        </div>
         <?php
     }
 
     public function field_test_mode_page() {
-        $settings = aqm_popup_get_settings();
-        $current  = (int) $settings['test_mode_page_id'];
-        $pages    = get_posts( array(
+        $current = (int) $this->fval( 'test_mode_page_id', true, 0 );
+        $pages   = get_posts( array(
             'post_type'      => 'page',
             'posts_per_page' => -1,
             'orderby'        => 'title',
@@ -438,7 +478,7 @@ class AQM_Popup_Admin {
             'post_status'    => array( 'publish', 'private', 'draft', 'pending' ),
         ) );
 
-        echo '<select name="' . esc_attr( self::OPTION_KEY ) . '[test_mode_page_id]">';
+        echo '<select name="' . esc_attr( $this->fname( 'test_mode_page_id', true ) ) . '">';
         echo '<option value="0">' . esc_html__( '— Select a page —', 'aqm-popup' ) . '</option>';
         foreach ( $pages as $page ) {
             $title = $page->post_title ? $page->post_title : sprintf( '(no title — #%d)', $page->ID );
@@ -460,96 +500,334 @@ class AQM_Popup_Admin {
                 echo ' <a href="' . esc_url( $url ) . '" target="_blank" rel="noopener" class="button">' . esc_html__( 'Open test page ↗', 'aqm-popup' ) . '</a>';
             }
         }
-
-        echo '<p class="description">' . esc_html__( 'Drafts are included so you can test in private — only logged-in users with edit access can view a draft page.', 'aqm-popup' ) . '</p>';
+        echo '<p class="description">' . esc_html__( 'Drafts are included so you can test privately.', 'aqm-popup' ) . '</p>';
     }
 
-    public function field_trigger_click() {
-        $settings = aqm_popup_get_settings();
-        ?>
-        <label class="aqm-popup-trigger-toggle">
-            <input type="checkbox" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[trigger_click_enabled]" value="1" <?php checked( ! empty( $settings['trigger_click_enabled'] ) ); ?> data-aqm-trigger="click" />
-            <?php esc_html_e( 'Show when a specific element is clicked', 'aqm-popup' ); ?>
-        </label>
-        <div class="aqm-popup-trigger-sub" data-aqm-trigger-sub="click">
-            <label>
-                <?php esc_html_e( 'CSS selector:', 'aqm-popup' ); ?>
-                <input type="text" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[trigger_click_selector]" value="<?php echo esc_attr( $settings['trigger_click_selector'] ); ?>" class="regular-text" placeholder=".open-popup, #cta-button" />
-            </label>
-            <p class="description"><?php esc_html_e( 'Any standard CSS selector. Clicks on matching elements (including nested children) open the popup. If the element is a link, the default navigation is prevented.', 'aqm-popup' ); ?></p>
-            <p class="description"><?php echo wp_kses_post( __( '<strong>Not firing?</strong> While test mode is on, AQM Popup logs every click event to your browser DevTools console (F12 → Console). Click your trigger element — if the log shows <code>matched selector? false</code>, the selector doesn\'t match the button you clicked. Verify it by running <code>document.querySelectorAll(\'your-selector\')</code> in the console — it should return at least one element.', 'aqm-popup' ) ); ?></p>
-        </div>
-        <?php
-    }
-
+    /* ----------------------------------------------------------------
+     * Save: merge the edited design back into the full structure.
+     * ---------------------------------------------------------------- */
     public function sanitize( $input ) {
-        $defaults = aqm_popup_default_settings();
-        $out      = $defaults;
+        $out = aqm_popup_get_settings(); // existing structure (preserves other designs, order, active).
 
         if ( ! is_array( $input ) ) {
             return $out;
         }
 
-        $out['enabled']                = ! empty( $input['enabled'] );
+        // Global flags.
+        $out['enabled']           = ! empty( $input['enabled'] );
+        $out['test_mode_enabled'] = ! empty( $input['test_mode_enabled'] );
+        $out['test_mode_page_id'] = isset( $input['test_mode_page_id'] ) ? max( 0, (int) $input['test_mode_page_id'] ) : 0;
 
-        // Content.
-        $out['content_image_id']       = isset( $input['content_image_id'] ) ? max( 0, (int) $input['content_image_id'] ) : 0;
-        $out['content_heading']        = isset( $input['content_heading'] ) ? sanitize_text_field( $input['content_heading'] ) : '';
-        $out['content_body']           = isset( $input['content_body'] ) ? sanitize_textarea_field( $input['content_body'] ) : '';
-        $out['content_button_label']   = isset( $input['content_button_label'] ) ? sanitize_text_field( $input['content_button_label'] ) : '';
-        $out['content_button_url']     = isset( $input['content_button_url'] ) ? esc_url_raw( trim( (string) $input['content_button_url'] ) ) : '';
-        $out['content_button_new_tab'] = ! empty( $input['content_button_new_tab'] );
+        // Which design was edited.
+        $id = isset( $input['editing_design'] ) ? sanitize_text_field( $input['editing_design'] ) : $out['active'];
+        if ( '' === $id || ! isset( $out['designs'][ $id ] ) ) {
+            $id = $out['active'];
+        }
 
-        // Style — colors validated as #rrggbb (fall back to default), sizes clamped.
-        $out['style_bg_color']          = $this->sanitize_hex( isset( $input['style_bg_color'] ) ? $input['style_bg_color'] : '', $defaults['style_bg_color'] );
-        $out['style_bg_image_id']       = isset( $input['style_bg_image_id'] ) ? max( 0, (int) $input['style_bg_image_id'] ) : 0;
-        $out['style_bg_overlay_color']  = $this->sanitize_hex( isset( $input['style_bg_overlay_color'] ) ? $input['style_bg_overlay_color'] : '', $defaults['style_bg_overlay_color'] );
-        $out['style_bg_overlay_opacity']= isset( $input['style_bg_overlay_opacity'] ) ? min( 1, max( 0, (float) $input['style_bg_overlay_opacity'] ) ) : $defaults['style_bg_overlay_opacity'];
-        $out['style_text_color']        = $this->sanitize_hex( isset( $input['style_text_color'] ) ? $input['style_text_color'] : '', $defaults['style_text_color'] );
-        $out['style_button_bg']         = $this->sanitize_hex( isset( $input['style_button_bg'] ) ? $input['style_button_bg'] : '', $defaults['style_button_bg'] );
-        $out['style_button_text_color'] = $this->sanitize_hex( isset( $input['style_button_text_color'] ) ? $input['style_button_text_color'] : '', $defaults['style_button_text_color'] );
-        $out['style_max_width']         = isset( $input['style_max_width'] ) ? min( 1200, max( 240, (int) $input['style_max_width'] ) ) : $defaults['style_max_width'];
-        $out['style_padding']           = isset( $input['style_padding'] ) ? min( 96, max( 0, (int) $input['style_padding'] ) ) : $defaults['style_padding'];
-        $out['style_align']             = ( isset( $input['style_align'] ) && 'left' === $input['style_align'] ) ? 'left' : 'center';
-
-        $out['trigger_delay_enabled']  = ! empty( $input['trigger_delay_enabled'] );
-        $out['trigger_delay_seconds']  = isset( $input['trigger_delay_seconds'] ) ? max( 0, (int) $input['trigger_delay_seconds'] ) : $defaults['trigger_delay_seconds'];
-
-        $out['trigger_scroll_enabled'] = ! empty( $input['trigger_scroll_enabled'] );
-        $out['trigger_scroll_percent'] = isset( $input['trigger_scroll_percent'] ) ? min( 100, max( 1, (int) $input['trigger_scroll_percent'] ) ) : $defaults['trigger_scroll_percent'];
-
-        $out['trigger_exit_enabled']   = ! empty( $input['trigger_exit_enabled'] );
-
-        $out['trigger_click_enabled']  = ! empty( $input['trigger_click_enabled'] );
-        $out['trigger_click_selector'] = isset( $input['trigger_click_selector'] ) ? sanitize_text_field( $input['trigger_click_selector'] ) : '';
-
-        $out['max_per_session']        = isset( $input['max_per_session'] ) ? max( 1, (int) $input['max_per_session'] ) : $defaults['max_per_session'];
-        $out['cooldown_days']          = isset( $input['cooldown_days'] ) ? max( 0, (float) $input['cooldown_days'] ) : $defaults['cooldown_days'];
-
-        $out['close_on_overlay_click'] = ! empty( $input['close_on_overlay_click'] );
-        $out['close_on_esc']           = ! empty( $input['close_on_esc'] );
-
-        $out['overlay_opacity']        = isset( $input['overlay_opacity'] ) ? min( 1, max( 0, (float) $input['overlay_opacity'] ) ) : $defaults['overlay_opacity'];
-
-        $out['overlay_padding_vertical']   = isset( $input['overlay_padding_vertical'] )   ? max( 0, (int) $input['overlay_padding_vertical'] )   : 0;
-        $out['overlay_padding_horizontal'] = isset( $input['overlay_padding_horizontal'] ) ? max( 0, (int) $input['overlay_padding_horizontal'] ) : 0;
-
-        $out['popup_border']           = $this->sanitize_css_value( isset( $input['popup_border'] ) ? $input['popup_border'] : '' );
-        $out['popup_border_radius_px'] = isset( $input['popup_border_radius_px'] ) ? min( 200, max( 0, (int) $input['popup_border_radius_px'] ) ) : 0;
-
-        $out['close_size_px']          = isset( $input['close_size_px'] )          ? min( 200, max( 16, (int) $input['close_size_px'] ) )        : $defaults['close_size_px'];
-        $out['close_offset_px']        = isset( $input['close_offset_px'] )        ? min( 100, max( -100, (int) $input['close_offset_px'] ) )    : $defaults['close_offset_px'];
-        $out['close_background']       = $this->sanitize_css_value( isset( $input['close_background'] ) ? $input['close_background'] : $defaults['close_background'] );
-        $out['close_icon_color']       = $this->sanitize_css_value( isset( $input['close_icon_color'] ) ? $input['close_icon_color'] : $defaults['close_icon_color'] );
-        $out['close_border_radius_px'] = isset( $input['close_border_radius_px'] ) ? min( 100, max( 0, (int) $input['close_border_radius_px'] ) ) : $defaults['close_border_radius_px'];
-        // Empty strings after sanitize → fall back to defaults so the popup never breaks.
-        if ( '' === $out['close_background'] )  $out['close_background']  = $defaults['close_background'];
-        if ( '' === $out['close_icon_color'] )  $out['close_icon_color']  = $defaults['close_icon_color'];
-
-        $out['test_mode_enabled']      = ! empty( $input['test_mode_enabled'] );
-        $out['test_mode_page_id']      = isset( $input['test_mode_page_id'] ) ? max( 0, (int) $input['test_mode_page_id'] ) : 0;
+        if ( isset( $out['designs'][ $id ] ) && isset( $input['design'] ) && is_array( $input['design'] ) ) {
+            $out['designs'][ $id ] = $this->sanitize_design( $input['design'], $out['designs'][ $id ] );
+        }
 
         return $out;
+    }
+
+    /**
+     * Sanitize one design's submitted fields, using the existing design as the
+     * base (so fields not present in the form — e.g. `archived` — are preserved).
+     */
+    private function sanitize_design( $in, $existing ) {
+        $defaults = aqm_popup_design_defaults();
+        $out      = array_merge( $defaults, is_array( $existing ) ? $existing : array() );
+
+        $out['name'] = isset( $in['name'] ) && '' !== trim( (string) $in['name'] )
+            ? sanitize_text_field( $in['name'] )
+            : ( isset( $existing['name'] ) ? $existing['name'] : $defaults['name'] );
+
+        $out['start_date'] = $this->sanitize_date( isset( $in['start_date'] ) ? $in['start_date'] : '' );
+        $out['end_date']   = $this->sanitize_date( isset( $in['end_date'] ) ? $in['end_date'] : '' );
+
+        // Content.
+        $out['content_image_id']       = isset( $in['content_image_id'] ) ? max( 0, (int) $in['content_image_id'] ) : 0;
+        $out['content_heading']        = isset( $in['content_heading'] ) ? sanitize_text_field( $in['content_heading'] ) : '';
+        $out['content_body']           = isset( $in['content_body'] ) ? sanitize_textarea_field( $in['content_body'] ) : '';
+        $out['content_button_label']   = isset( $in['content_button_label'] ) ? sanitize_text_field( $in['content_button_label'] ) : '';
+        $out['content_button_url']     = isset( $in['content_button_url'] ) ? esc_url_raw( trim( (string) $in['content_button_url'] ) ) : '';
+        $out['content_button_new_tab'] = ! empty( $in['content_button_new_tab'] );
+
+        // Style.
+        $out['style_bg_color']           = $this->sanitize_hex( isset( $in['style_bg_color'] ) ? $in['style_bg_color'] : '', $defaults['style_bg_color'] );
+        $out['style_bg_image_id']        = isset( $in['style_bg_image_id'] ) ? max( 0, (int) $in['style_bg_image_id'] ) : 0;
+        $out['style_bg_overlay_color']   = $this->sanitize_hex( isset( $in['style_bg_overlay_color'] ) ? $in['style_bg_overlay_color'] : '', $defaults['style_bg_overlay_color'] );
+        $out['style_bg_overlay_opacity'] = isset( $in['style_bg_overlay_opacity'] ) ? min( 1, max( 0, (float) $in['style_bg_overlay_opacity'] ) ) : $defaults['style_bg_overlay_opacity'];
+        $out['style_text_color']         = $this->sanitize_hex( isset( $in['style_text_color'] ) ? $in['style_text_color'] : '', $defaults['style_text_color'] );
+        $out['style_button_bg']          = $this->sanitize_hex( isset( $in['style_button_bg'] ) ? $in['style_button_bg'] : '', $defaults['style_button_bg'] );
+        $out['style_button_text_color']  = $this->sanitize_hex( isset( $in['style_button_text_color'] ) ? $in['style_button_text_color'] : '', $defaults['style_button_text_color'] );
+        $out['style_max_width']          = isset( $in['style_max_width'] ) ? min( 1200, max( 240, (int) $in['style_max_width'] ) ) : $defaults['style_max_width'];
+        $out['style_min_height']         = isset( $in['style_min_height'] ) ? min( 1200, max( 0, (int) $in['style_min_height'] ) ) : $defaults['style_min_height'];
+        $out['style_padding']            = isset( $in['style_padding'] ) ? min( 96, max( 0, (int) $in['style_padding'] ) ) : $defaults['style_padding'];
+        $out['style_align']              = $this->sanitize_choice( isset( $in['style_align'] ) ? $in['style_align'] : '', array( 'left', 'center', 'right' ), 'center' );
+        $out['style_vertical_align']     = $this->sanitize_choice( isset( $in['style_vertical_align'] ) ? $in['style_vertical_align'] : '', array( 'top', 'center', 'bottom' ), 'top' );
+
+        // Typography.
+        $fonts = aqm_popup_fonts();
+        $ff    = isset( $in['style_font_family'] ) ? (string) $in['style_font_family'] : '';
+        $out['style_font_family']  = isset( $fonts[ $ff ] ) ? $ff : '';
+        $out['style_heading_size'] = isset( $in['style_heading_size'] ) ? min( 96, max( 10, (int) $in['style_heading_size'] ) ) : $defaults['style_heading_size'];
+        $out['style_body_size']    = isset( $in['style_body_size'] ) ? min( 48, max( 10, (int) $in['style_body_size'] ) ) : $defaults['style_body_size'];
+        $weights                   = array( 400, 500, 600, 700, 800 );
+        $out['style_heading_weight'] = ( isset( $in['style_heading_weight'] ) && in_array( (int) $in['style_heading_weight'], $weights, true ) ) ? (int) $in['style_heading_weight'] : 700;
+        $out['style_body_weight']    = ( isset( $in['style_body_weight'] ) && in_array( (int) $in['style_body_weight'], $weights, true ) ) ? (int) $in['style_body_weight'] : 400;
+
+        // Triggers.
+        $out['trigger_delay_enabled']  = ! empty( $in['trigger_delay_enabled'] );
+        $out['trigger_delay_seconds']  = isset( $in['trigger_delay_seconds'] ) ? max( 0, (int) $in['trigger_delay_seconds'] ) : $defaults['trigger_delay_seconds'];
+        $out['trigger_scroll_enabled'] = ! empty( $in['trigger_scroll_enabled'] );
+        $out['trigger_scroll_percent'] = isset( $in['trigger_scroll_percent'] ) ? min( 100, max( 1, (int) $in['trigger_scroll_percent'] ) ) : $defaults['trigger_scroll_percent'];
+        $out['trigger_exit_enabled']   = ! empty( $in['trigger_exit_enabled'] );
+        $out['trigger_click_enabled']  = ! empty( $in['trigger_click_enabled'] );
+        $out['trigger_click_selector'] = isset( $in['trigger_click_selector'] ) ? sanitize_text_field( $in['trigger_click_selector'] ) : '';
+
+        // Frequency.
+        $out['max_per_session'] = isset( $in['max_per_session'] ) ? max( 1, (int) $in['max_per_session'] ) : $defaults['max_per_session'];
+        $out['cooldown_days']   = isset( $in['cooldown_days'] ) ? max( 0, (float) $in['cooldown_days'] ) : $defaults['cooldown_days'];
+
+        // Behavior.
+        $out['close_on_overlay_click']     = ! empty( $in['close_on_overlay_click'] );
+        $out['close_on_esc']               = ! empty( $in['close_on_esc'] );
+        $out['overlay_opacity']            = isset( $in['overlay_opacity'] ) ? min( 1, max( 0, (float) $in['overlay_opacity'] ) ) : $defaults['overlay_opacity'];
+        $out['overlay_padding_vertical']   = isset( $in['overlay_padding_vertical'] ) ? max( 0, (int) $in['overlay_padding_vertical'] ) : 0;
+        $out['overlay_padding_horizontal'] = isset( $in['overlay_padding_horizontal'] ) ? max( 0, (int) $in['overlay_padding_horizontal'] ) : 0;
+        $out['popup_border']               = $this->sanitize_css_value( isset( $in['popup_border'] ) ? $in['popup_border'] : '' );
+        $out['popup_border_radius_px']     = isset( $in['popup_border_radius_px'] ) ? min( 200, max( 0, (int) $in['popup_border_radius_px'] ) ) : 0;
+
+        // Close icon.
+        $out['close_size_px']          = isset( $in['close_size_px'] ) ? min( 200, max( 16, (int) $in['close_size_px'] ) ) : $defaults['close_size_px'];
+        $out['close_offset_px']        = isset( $in['close_offset_px'] ) ? min( 100, max( -100, (int) $in['close_offset_px'] ) ) : $defaults['close_offset_px'];
+        $out['close_background']       = $this->sanitize_css_value( isset( $in['close_background'] ) ? $in['close_background'] : $defaults['close_background'] );
+        $out['close_icon_color']       = $this->sanitize_css_value( isset( $in['close_icon_color'] ) ? $in['close_icon_color'] : $defaults['close_icon_color'] );
+        $out['close_border_radius_px'] = isset( $in['close_border_radius_px'] ) ? min( 100, max( 0, (int) $in['close_border_radius_px'] ) ) : $defaults['close_border_radius_px'];
+        if ( '' === $out['close_background'] ) {
+            $out['close_background'] = $defaults['close_background'];
+        }
+        if ( '' === $out['close_icon_color'] ) {
+            $out['close_icon_color'] = $defaults['close_icon_color'];
+        }
+
+        return $out;
+    }
+
+    private function sanitize_choice( $value, $allowed, $fallback ) {
+        $value = is_string( $value ) ? $value : '';
+        return in_array( $value, $allowed, true ) ? $value : $fallback;
+    }
+
+    private function sanitize_date( $value ) {
+        $value = is_string( $value ) ? trim( $value ) : '';
+        if ( '' === $value ) {
+            return '';
+        }
+        $d = DateTime::createFromFormat( 'Y-m-d', $value );
+        if ( $d && $d->format( 'Y-m-d' ) === $value ) {
+            return $value;
+        }
+        return '';
+    }
+
+    /* ----------------------------------------------------------------
+     * Design management actions (add / activate / duplicate / delete /
+     * archive). Each is capability + nonce protected.
+     * ---------------------------------------------------------------- */
+    public function handle_design_action() {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_die( esc_html__( 'Insufficient permissions.', 'aqm-popup' ) );
+        }
+        check_admin_referer( 'aqm_popup_designs' );
+
+        $action = isset( $_REQUEST['aqm_action'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['aqm_action'] ) ) : '';
+        $id     = isset( $_REQUEST['design'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['design'] ) ) : '';
+
+        $settings = aqm_popup_get_settings();
+        $redirect = $id;
+
+        switch ( $action ) {
+            case 'add':
+                $new_id  = $this->new_design_id( $settings );
+                $design  = aqm_popup_design_defaults();
+                /* translators: %d: design number */
+                $design['name']                = sprintf( __( 'Design %d', 'aqm-popup' ), count( $settings['designs'] ) + 1 );
+                $settings['designs'][ $new_id ] = $design;
+                $settings['order'][]            = $new_id;
+                $redirect                       = $new_id;
+                break;
+
+            case 'activate':
+                if ( isset( $settings['designs'][ $id ] ) ) {
+                    $settings['active'] = $id;
+                }
+                break;
+
+            case 'duplicate':
+                if ( isset( $settings['designs'][ $id ] ) ) {
+                    $new_id           = $this->new_design_id( $settings );
+                    $copy             = $settings['designs'][ $id ];
+                    /* translators: %s: original design name */
+                    $copy['name']     = sprintf( __( '%s (copy)', 'aqm-popup' ), $copy['name'] );
+                    $copy['archived'] = false;
+                    $settings['designs'][ $new_id ] = $copy;
+                    // Insert right after the original in the order.
+                    $pos       = array_search( $id, $settings['order'], true );
+                    $new_order = $settings['order'];
+                    if ( false !== $pos ) {
+                        array_splice( $new_order, $pos + 1, 0, array( $new_id ) );
+                    } else {
+                        $new_order[] = $new_id;
+                    }
+                    $settings['order'] = $new_order;
+                    $redirect          = $new_id;
+                }
+                break;
+
+            case 'archive':
+            case 'unarchive':
+                if ( isset( $settings['designs'][ $id ] ) ) {
+                    $settings['designs'][ $id ]['archived'] = ( 'archive' === $action );
+                }
+                break;
+
+            case 'delete':
+                if ( isset( $settings['designs'][ $id ] ) && count( $settings['designs'] ) > 1 ) {
+                    unset( $settings['designs'][ $id ] );
+                    $settings['order'] = array_values( array_diff( $settings['order'], array( $id ) ) );
+                    if ( $settings['active'] === $id ) {
+                        $settings['active'] = $settings['order'] ? $settings['order'][0] : '';
+                    }
+                    $redirect = $settings['active'];
+                }
+                break;
+        }
+
+        update_option( self::OPTION_KEY, aqm_popup_normalize_settings( $settings ) );
+
+        $url = admin_url( 'admin.php?page=' . self::PAGE_SLUG );
+        if ( $redirect ) {
+            $url = add_query_arg( 'design', rawurlencode( $redirect ), $url );
+        }
+        wp_safe_redirect( $url );
+        exit;
+    }
+
+    private function new_design_id( $settings ) {
+        $max = 0;
+        foreach ( array_keys( $settings['designs'] ) as $id ) {
+            if ( preg_match( '/^d(\d+)$/', (string) $id, $m ) ) {
+                $max = max( $max, (int) $m[1] );
+            }
+        }
+        return 'd' . ( $max + 1 );
+    }
+
+    private function design_action_url( $action, $id = '' ) {
+        $url = add_query_arg(
+            array(
+                'action'     => 'aqm_popup_designs',
+                'aqm_action' => $action,
+                'design'     => $id,
+            ),
+            admin_url( 'admin-post.php' )
+        );
+        return wp_nonce_url( $url, 'aqm_popup_designs' );
+    }
+
+    private function edit_url( $id ) {
+        return admin_url( 'admin.php?page=' . self::PAGE_SLUG . '&design=' . rawurlencode( $id ) );
+    }
+
+    /* ----------------------------------------------------------------
+     * Designs manager panel (rendered inside the settings form).
+     * ---------------------------------------------------------------- */
+    private function render_designs_manager( $settings, $editing_id ) {
+        ?>
+        <h2><?php esc_html_e( 'Designs', 'aqm-popup' ); ?></h2>
+        <div class="aqm-designs">
+            <p class="aqm-designs__intro"><?php esc_html_e( 'Your library of popup designs. One is active (live). Activate any design at any time; archive the ones you are not using. Each design can have its own start/end dates.', 'aqm-popup' ); ?></p>
+
+            <label class="aqm-master">
+                <input type="checkbox" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[enabled]" value="1" <?php checked( ! empty( $settings['enabled'] ) ); ?> data-aqm-master-enable />
+                <span><?php esc_html_e( 'Popup enabled site-wide (master switch)', 'aqm-popup' ); ?></span>
+            </label>
+
+            <ul class="aqm-designs__list">
+                <?php
+                foreach ( $settings['order'] as $id ) {
+                    if ( ! isset( $settings['designs'][ $id ] ) ) {
+                        continue;
+                    }
+                    $design     = $settings['designs'][ $id ];
+                    $is_active  = ( $settings['active'] === $id );
+                    $is_editing = ( $editing_id === $id );
+                    $archived   = ! empty( $design['archived'] );
+                    $classes    = 'aqm-design';
+                    if ( $is_active )  { $classes .= ' is-active'; }
+                    if ( $is_editing ) { $classes .= ' is-editing'; }
+                    if ( $archived )   { $classes .= ' is-archived'; }
+
+                    $sched = $this->schedule_summary( $design );
+                    ?>
+                    <li class="<?php echo esc_attr( $classes ); ?>">
+                        <div class="aqm-design__main">
+                            <span class="aqm-design__name"><?php echo esc_html( $design['name'] ); ?></span>
+                            <?php if ( $is_active ) : ?><span class="aqm-design__badge aqm-design__badge--active"><?php esc_html_e( 'Active', 'aqm-popup' ); ?></span><?php endif; ?>
+                            <?php if ( $archived ) : ?><span class="aqm-design__badge aqm-design__badge--archived"><?php esc_html_e( 'Archived', 'aqm-popup' ); ?></span><?php endif; ?>
+                            <?php if ( $is_editing ) : ?><span class="aqm-design__badge aqm-design__badge--editing"><?php esc_html_e( 'Editing', 'aqm-popup' ); ?></span><?php endif; ?>
+                            <?php if ( $sched ) : ?><span class="aqm-design__sched"><?php echo esc_html( $sched ); ?></span><?php endif; ?>
+                        </div>
+                        <div class="aqm-design__actions">
+                            <?php if ( ! $is_editing ) : ?>
+                                <a class="button button-small" href="<?php echo esc_url( $this->edit_url( $id ) ); ?>"><?php esc_html_e( 'Edit', 'aqm-popup' ); ?></a>
+                            <?php endif; ?>
+                            <?php if ( ! $is_active ) : ?>
+                                <a class="button button-small button-primary" href="<?php echo esc_url( $this->design_action_url( 'activate', $id ) ); ?>"><?php esc_html_e( 'Activate', 'aqm-popup' ); ?></a>
+                            <?php endif; ?>
+                            <a class="button button-small" href="<?php echo esc_url( $this->design_action_url( 'duplicate', $id ) ); ?>"><?php esc_html_e( 'Duplicate', 'aqm-popup' ); ?></a>
+                            <?php if ( $archived ) : ?>
+                                <a class="button button-small" href="<?php echo esc_url( $this->design_action_url( 'unarchive', $id ) ); ?>"><?php esc_html_e( 'Unarchive', 'aqm-popup' ); ?></a>
+                            <?php else : ?>
+                                <a class="button button-small" href="<?php echo esc_url( $this->design_action_url( 'archive', $id ) ); ?>"><?php esc_html_e( 'Archive', 'aqm-popup' ); ?></a>
+                            <?php endif; ?>
+                            <?php if ( count( $settings['designs'] ) > 1 ) : ?>
+                                <a class="button button-small button-link-delete aqm-design__delete" href="<?php echo esc_url( $this->design_action_url( 'delete', $id ) ); ?>" data-aqm-confirm="<?php esc_attr_e( 'Delete this design permanently?', 'aqm-popup' ); ?>"><?php esc_html_e( 'Delete', 'aqm-popup' ); ?></a>
+                            <?php endif; ?>
+                        </div>
+                    </li>
+                    <?php
+                }
+                ?>
+            </ul>
+
+            <p class="aqm-designs__add">
+                <a class="button" href="<?php echo esc_url( $this->design_action_url( 'add' ) ); ?>"><span class="dashicons dashicons-plus-alt2" aria-hidden="true"></span> <?php esc_html_e( 'Add design', 'aqm-popup' ); ?></a>
+                <span class="description"><?php esc_html_e( 'Adding, activating, duplicating, or switching designs reloads the page — save your edits first.', 'aqm-popup' ); ?></span>
+            </p>
+        </div>
+        <?php
+    }
+
+    private function schedule_summary( $design ) {
+        $start = ! empty( $design['start_date'] ) ? $design['start_date'] : '';
+        $end   = ! empty( $design['end_date'] ) ? $design['end_date'] : '';
+        if ( '' === $start && '' === $end ) {
+            return '';
+        }
+        if ( '' !== $start && '' !== $end ) {
+            /* translators: 1: start date, 2: end date */
+            return sprintf( __( '%1$s → %2$s', 'aqm-popup' ), $start, $end );
+        }
+        if ( '' !== $start ) {
+            /* translators: %s: start date */
+            return sprintf( __( 'from %s', 'aqm-popup' ), $start );
+        }
+        /* translators: %s: end date */
+        return sprintf( __( 'until %s', 'aqm-popup' ), $end );
     }
 
     public function render_page() {
@@ -557,6 +835,7 @@ class AQM_Popup_Admin {
             return;
         }
         $settings    = aqm_popup_get_settings();
+        $editing_id  = $this->current_design_id();
         $is_enabled  = ! empty( $settings['enabled'] );
         $is_test     = ! empty( $settings['test_mode_enabled'] );
         $repo_url    = 'https://github.com/' . AQM_POPUP_GH_USER . '/' . AQM_POPUP_GH_REPO;
@@ -586,7 +865,7 @@ class AQM_Popup_Admin {
                             </span>
                             <div>
                                 <h1 class="aqm-hero__title"><?php echo esc_html( get_admin_page_title() ); ?></h1>
-                                <p class="aqm-hero__sub"><?php esc_html_e( 'Build a site-wide popup — image, headline, text, button. Set the triggers, how often it shows, and how it looks.', 'aqm-popup' ); ?></p>
+                                <p class="aqm-hero__sub"><?php esc_html_e( 'Build site-wide popups — a library of designs you can schedule and activate any time.', 'aqm-popup' ); ?></p>
                             </div>
                         </div>
                         <div class="aqm-hero__meta">
@@ -604,6 +883,7 @@ class AQM_Popup_Admin {
 
                 <form method="post" action="options.php" class="aqm-shell" data-aqm-shell>
                     <?php settings_fields( 'aqm_popup_settings_group' ); ?>
+                    <input type="hidden" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[editing_design]" value="<?php echo esc_attr( $editing_id ); ?>" />
 
                     <nav class="aqm-nav" data-aqm-nav aria-label="<?php esc_attr_e( 'Settings sections', 'aqm-popup' ); ?>">
                         <span class="aqm-nav__indicator" data-aqm-nav-indicator aria-hidden="true"></span>
@@ -611,11 +891,12 @@ class AQM_Popup_Admin {
                     </nav>
 
                     <div class="aqm-main" data-aqm-sections data-aqm-reveal>
+                        <?php $this->render_designs_manager( $settings, $editing_id ); ?>
                         <?php do_settings_sections( self::PAGE_SLUG ); ?>
 
                         <div class="aqm-actions">
                             <?php submit_button( __( 'Save changes', 'aqm-popup' ), 'primary aqm-save', 'submit', false ); ?>
-                            <span class="aqm-actions__hint"><?php esc_html_e( 'Changes apply the next time a visitor loads the site.', 'aqm-popup' ); ?></span>
+                            <span class="aqm-actions__hint"><?php esc_html_e( 'Saves the design you are editing. Changes apply next time a visitor loads the site.', 'aqm-popup' ); ?></span>
                         </div>
                     </div>
 
@@ -645,7 +926,7 @@ class AQM_Popup_Admin {
                                     </div>
                                 </div>
                             </div>
-                            <p class="aqm-preview__note"><?php esc_html_e( 'Shows your content and styling as visitors will see it. The dark backdrop and close button are added automatically.', 'aqm-popup' ); ?></p>
+                            <p class="aqm-preview__note"><?php esc_html_e( 'Shows the design you are editing. The dark backdrop and close button are added automatically.', 'aqm-popup' ); ?></p>
                         </section>
 
                         <section class="aqm-card aqm-card--updates">
@@ -678,10 +959,7 @@ class AQM_Popup_Admin {
             wp_send_json_error( array( 'message' => __( 'Insufficient permissions.', 'aqm-popup' ) ), 403 );
         }
 
-        // Clear the plugin's own GitHub-data transient (6-hour cache used by AQM_Popup_Updater).
         delete_transient( 'aqm_popup_github_data_' . md5( AQM_POPUP_GH_USER . AQM_POPUP_GH_REPO ) );
-
-        // Clear WordPress's own plugin-update transient and plugin cache so it re-polls.
         delete_site_transient( 'update_plugins' );
         wp_clean_plugins_cache( true );
 
@@ -690,9 +968,9 @@ class AQM_Popup_Admin {
         }
         wp_update_plugins();
 
-        $transient        = get_site_transient( 'update_plugins' );
-        $current_version  = AQM_POPUP_VERSION;
-        $new_version      = null;
+        $transient       = get_site_transient( 'update_plugins' );
+        $current_version = AQM_POPUP_VERSION;
+        $new_version     = null;
 
         if ( $transient && isset( $transient->response[ AQM_POPUP_BASENAME ]->new_version ) ) {
             $new_version = $transient->response[ AQM_POPUP_BASENAME ]->new_version;
@@ -727,20 +1005,8 @@ class AQM_Popup_Admin {
     /**
      * Sanitize a free-form CSS value (color, length, border shorthand, etc.)
      * for safe injection into the inline `<style>` block the display class
-     * emits on render.
-     *
-     * Two layers:
-     * 1. Strip characters that could break out of the `<style>` context or the
-     *    surrounding rule: < > ; { } " ' and backslash.
-     * 2. Allowlist CSS functions. The only functions these fields legitimately
-     *    need are the color functions, so any '(' that isn't part of an
-     *    rgb()/rgba()/hsl()/hsla() call is rejected. This blocks url(),
-     *    image(), (legacy) expression(), and similar — i.e. anything that could
-     *    load an external resource — including nested/obfuscated attempts.
-     *
-     * Returns trimmed result, or '' if the value is rejected. Empty is OK; the
-     * caller falls back to the default (colors) or to "no border" — so the
-     * popup never renders broken CSS.
+     * emits. Strips characters that could break out of the rule, then allowlists
+     * only the color functions (rgb/rgba/hsl/hsla) — blocking url(), etc.
      */
     private function sanitize_css_value( $input ) {
         $input = sanitize_text_field( (string) $input );
@@ -751,9 +1017,6 @@ class AQM_Popup_Admin {
             return '';
         }
 
-        // Function allowlist: remove valid color-function calls, then reject the
-        // whole value if any parenthesis remains (a disallowed function, e.g.
-        // url(...), or a malformed/nested call).
         if ( false !== strpos( $input, '(' ) || false !== strpos( $input, ')' ) ) {
             $stripped = preg_replace( '/\b(?:rgba?|hsla?)\s*\([^()]*\)/i', '', $input );
             if ( false !== strpos( $stripped, '(' ) || false !== strpos( $stripped, ')' ) ) {
@@ -764,11 +1027,6 @@ class AQM_Popup_Admin {
         return $input;
     }
 
-    /**
-     * Validate a hex color (#rrggbb). Returns the lowercased hex, or the given
-     * fallback if the input isn't a valid 6-digit hex. The color inputs already
-     * emit #rrggbb, so this mainly guards against tampered/empty POST data.
-     */
     private function sanitize_hex( $input, $fallback ) {
         $input = is_string( $input ) ? trim( $input ) : '';
         if ( function_exists( 'sanitize_hex_color' ) ) {

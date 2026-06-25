@@ -1,6 +1,6 @@
 # AQM Popup
 
-A lightweight site-wide popup plugin. Build the popup right in the settings — an image, a headline, a paragraph, and an optional button — with configurable triggers, frequency caps, and a live preview. No page builder required.
+A lightweight site-wide popup plugin. Build popups right in the settings — image, headline, text, button, colors, and fonts — keep a **library of designs**, **schedule** them by date, and switch which one is live at any time. Live preview included. No page builder required.
 
 ## Requirements
 
@@ -14,23 +14,38 @@ A lightweight site-wide popup plugin. Build the popup right in the settings — 
 
 ## Configure
 
-WP Admin → **AQM Popup**. The settings page has a sticky section nav, the settings panels, and a **live preview** that mirrors your content and styling as you edit.
+WP Admin → **AQM Popup**. The page has a **Designs** manager, a per-design editor with a sticky section nav, and a **live preview** that mirrors the design you're editing.
+
+### Designs
+
+- A library of popup designs. Each design is a full preset — its own content, style, typography, triggers, frequency, behavior, and close-icon.
+- **Activate** sets which one design is live. **Archive** sets one aside. **Duplicate** copies one. **Add** makes a new one. **Edit** loads a design into the editor below.
+- The master **Popup enabled site-wide** switch turns the whole popup on/off. When off, no frontend assets are enqueued.
+- Adding / activating / switching designs reloads the page, so save your edits first.
+
+### This design (name + schedule)
+
+- **Design name** — for your reference in the Designs list.
+- **Start date / End date** — optional. The active design only shows within this window (your site's timezone). Leave empty for no limit. Outside the window, no popup shows.
 
 ### Content
 
 | Setting | Notes |
 |---|---|
-| **Enable popup** | Master on/off. When off, no frontend assets are enqueued. |
 | **Image** | Choose an image from the Media Library. Sits flush at the top of the popup. Optional. |
 | **Headline** | Bold title at the top of the text. Optional. |
 | **Text** | A short paragraph. Line breaks are preserved. Optional. |
 | **Button label / link** | A call-to-action button. Both a label and a link are required for the button to show. Optionally open the link in a new tab. |
 
-Any field left empty is skipped — so an image-only popup or a text-only popup both work. The popup only shows once at least one of these is filled in.
+Any field left empty is skipped — an image-only, text-only, or background-image-only popup all work.
 
 ### Popup style
 
-Background color, text color, button color, button text color, max width, inner padding, and text alignment (left or center). Colors use a native color picker; everything updates in the live preview.
+Background color, **background image** (with an optional **overlay tint** for legibility), text color, button colors, max width, **minimum height**, inner padding, **text alignment** (left / center / right), and **vertical alignment** (top / center / bottom — needs a minimum height or background image to have room to work). Colors use a native color picker; everything updates in the live preview.
+
+### Typography
+
+Choose a **font** — Theme default (your site's font, no extra request) or a Google Font (Inter, Poppins, Montserrat, Roboto, Lato, Open Sans, Playfair Display, Merriweather) — and set the **headline and text size + weight**. Google Fonts load automatically on the front end.
 
 ### Triggers
 
@@ -82,7 +97,7 @@ To reset for a single visitor (e.g. during QA), open DevTools → Application �
 
 ## Limitations
 
-- One popup site-wide. No per-page targeting and no support for multiple popups — every enabled page sees the same one.
+- One **active** design shows at a time, site-wide (you can keep many designs in the library and switch between them). No per-page targeting — every enabled page shows the active design.
 - Exit intent is desktop-only.
 
 ## Updates

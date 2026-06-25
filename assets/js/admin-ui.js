@@ -23,6 +23,7 @@
         previewLabel: UI.previewLabel || 'Live preview',
         replay:       UI.replay       || 'Replay'
     };
+    var FONTS = (window.aqmPopupUi && window.aqmPopupUi.fonts) || {};
 
     function hasGSAP()    { return typeof window.gsap !== 'undefined'; }
     function reduceMotion() {
@@ -55,6 +56,7 @@
         try { initPreview(animate); } catch (e) { /* noop */ }
         try { initStatusChip(); } catch (e) { /* noop */ }
         try { initHero(); } catch (e) { /* noop */ }
+        try { initConfirms(); } catch (e) { /* noop */ }
 
         // Reveal runs last and is itself guarded; if it can't run, make sure the
         // content we hid up front is visible again.
@@ -65,6 +67,18 @@
             catch (e2) { /* noop */ }
         }
     });
+
+    /* ----------------------------------------------------------------
+     * Confirm before following a destructive link (e.g. delete design).
+     * ---------------------------------------------------------------- */
+    function initConfirms() {
+        document.addEventListener('click', function (e) {
+            var el = e.target.closest('[data-aqm-confirm]');
+            if (!el) { return; }
+            var msg = el.getAttribute('data-aqm-confirm') || 'Are you sure?';
+            if (!window.confirm(msg)) { e.preventDefault(); }
+        });
+    }
 
     /* ----------------------------------------------------------------
      * Regroup the Settings API output into panels and collect nav data.
@@ -228,8 +242,9 @@
             return parseInt(hex.slice(0, 2), 16) + ',' + parseInt(hex.slice(2, 4), 16) + ',' + parseInt(hex.slice(4, 6), 16);
         }
 
+        // Editor fields for a design are namespaced under [design][...].
         function field(name) {
-            return form.querySelector('[name="aqm_popup_settings[' + name + ']"]');
+            return form.querySelector('[name="aqm_popup_settings[design][' + name + ']"]');
         }
         function num(name, def) {
             var el = field(name);
@@ -268,7 +283,18 @@
             // ---- body styling ----
             popup.style.backgroundColor = str('style_bg_color', '#ffffff');
             popup.style.color = str('style_text_color', '#1d2327');
-            popup.style.textAlign = (str('style_align', 'center') === 'left') ? 'left' : 'center';
+            var al = str('style_align', 'center');
+            popup.style.textAlign = (al === 'left' || al === 'right') ? al : 'center';
+
+            // Font family (from the localized registry; '' = theme default).
+            popup.style.fontFamily = FONTS[str('style_font_family', '')] || '';
+
+            // Vertical alignment: flex column on the popup; min-height gives it room.
+            popup.style.display = 'flex';
+            popup.style.flexDirection = 'column';
+            var valign = str('style_vertical_align', 'top');
+            popup.style.justifyContent = (valign === 'center') ? 'center' : ((valign === 'bottom') ? 'flex-end' : 'flex-start');
+
             if (pvBody) { pvBody.style.padding = clamp(num('style_padding', 32), 0, 96) * 0.4 + 'px'; }
 
             // ---- background image (covers the popup, behind the content) ----
@@ -284,11 +310,15 @@
                 popup.style.backgroundSize = 'cover';
                 popup.style.backgroundPosition = 'center';
                 popup.style.backgroundRepeat = 'no-repeat';
-                popup.style.minHeight = '140px';
             } else {
                 popup.style.backgroundImage = 'none';
-                popup.style.minHeight = '';
             }
+
+            // Minimum height (scaled for the mini preview); a background image
+            // also gets a floor so it stays visible.
+            var minH = clamp(num('style_min_height', 0), 0, 1200) * 0.35;
+            if (bgUrl && minH < 130) { minH = 130; }
+            popup.style.minHeight = minH > 0 ? minH + 'px' : '';
 
             // ---- content ----
             var imgUrl = imgUrlFor('content_image_id');
@@ -300,11 +330,15 @@
                 var heading = str('content_heading', '');
                 pvHeading.textContent = heading;
                 pvHeading.hidden = heading === '';
+                pvHeading.style.fontSize = Math.max(11, clamp(num('style_heading_size', 28), 10, 96) * 0.5) + 'px';
+                pvHeading.style.fontWeight = String(num('style_heading_weight', 700));
             }
             if (pvText) {
                 var body = str('content_body', '');
                 pvText.textContent = body;
                 pvText.hidden = body === '';
+                pvText.style.fontSize = Math.max(10, clamp(num('style_body_size', 16), 10, 48) * 0.62) + 'px';
+                pvText.style.fontWeight = String(num('style_body_weight', 400));
             }
             if (pvBtn) {
                 var label = str('content_button_label', '');

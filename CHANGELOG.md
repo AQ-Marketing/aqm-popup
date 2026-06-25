@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.2.0 — 2026-06-25
+
+- **Designs library.** Save multiple popup designs and keep them in one place. Each design is a full preset — its own content, style, typography, triggers, frequency, behavior, and close-icon. **Activate** any design at any time, **Archive** the ones you are not using, **Duplicate** to spin up a variant, and **Add** new designs. One design is "active" (live); the rest are saved aside.
+  - Your existing popup is migrated automatically into **Design 1** and set active — nothing is lost.
+- **Scheduling.** Each design has optional **Start date** / **End date**. The active design only shows within its date window (your site's timezone); outside it, no popup. Great for seasonal campaigns prepared in advance.
+- **Vertical alignment + minimum height.** Center (or bottom-align) the content within the popup. A new **Minimum height** gives centering room to work (and pairs well with a background image).
+- **Typography.** Choose a **font** (Theme default or a Google Font — Inter, Poppins, Montserrat, Roboto, Lato, Open Sans, Playfair Display, Merriweather), and set **headline/text size and weight**. The chosen Google Font loads automatically on the front end. Text alignment now also supports **Right**.
+- **Admin:** new **Designs** manager panel, a per-design editor (switch which design you're editing), a **This design** section for the name + schedule, and a **Typography** section. The live preview reflects the design you're editing, including fonts and vertical alignment.
+- Design management actions are capability- and nonce-protected. Migration is covered by an automated test; the rendered output stays fully escaped.
+
 ## 1.1.2 — 2026-06-25
 
 - **Background-image overlay.** New **Image overlay color** + **Image overlay opacity** fields in *Popup style*. When a background image is set, this lays a tint between the image and your text (e.g. black at 0.4 to darken a photo) so the text stays readable. Opacity 0 = no overlay (default, so existing popups are unchanged). It's distinct from the dark backdrop "Overlay opacity" in Behavior. Implemented as a flat gradient layered over the image (no extra markup); reflected live in the preview.
