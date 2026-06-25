@@ -20,3 +20,9 @@ desktop.ini
 
 # Local-only debug
 debug.log
+
+# Local dev tooling / design context (not part of the distributed plugin)
+.claude/
+.agents/
+_preview_harness.html
+_static-server.cjs

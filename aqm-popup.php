@@ -2,8 +2,8 @@
 /*
 Plugin Name: AQM Popup
 Plugin URI: https://aqmarketing.com/
-Description: Site-wide popup for Divi 4 sites. Renders a Divi Library layout as the popup content, with configurable triggers (time delay, scroll depth, exit intent, click on element), per-session show cap, and post-dismissal cooldown.
-Version: 1.0.19
+Description: Site-wide popup builder. Compose the popup (image, headline, text, button) right in the settings, with configurable triggers (time delay, scroll depth, exit intent, click on element), per-session show cap, and post-dismissal cooldown.
+Version: 1.1.0
 Author: AQ Marketing
 Author URI: https://aqmarketing.com/
 GitHub Plugin URI: https://github.com/AQ-Marketing/aqm-popup
@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'AQM_POPUP_VERSION', '1.0.19' );
+define( 'AQM_POPUP_VERSION', '1.1.0' );
 define( 'AQM_POPUP_FILE', __FILE__ );
 define( 'AQM_POPUP_PATH', plugin_dir_path( __FILE__ ) );
 define( 'AQM_POPUP_URL', plugin_dir_url( __FILE__ ) );
@@ -39,7 +39,24 @@ function aqm_popup_debug_log( $message ) {
 function aqm_popup_default_settings() {
     return array(
         'enabled'                 => false,
-        'layout_id'               => 0,
+
+        // Content (built in-settings — no page builder required).
+        'content_image_id'        => 0,
+        'content_heading'         => '',
+        'content_body'            => '',
+        'content_button_label'    => '',
+        'content_button_url'      => '',
+        'content_button_new_tab'  => false,
+
+        // Popup body styling.
+        'style_bg_color'          => '#ffffff',
+        'style_text_color'        => '#1d2327',
+        'style_button_bg'         => '#c10f30',
+        'style_button_text_color' => '#ffffff',
+        'style_max_width'         => 480,
+        'style_padding'           => 32,
+        'style_align'             => 'center',
+
         'trigger_delay_enabled'   => false,
         'trigger_delay_seconds'   => 10,
         'trigger_scroll_enabled'  => false,
@@ -52,7 +69,6 @@ function aqm_popup_default_settings() {
         'close_on_overlay_click'  => true,
         'close_on_esc'            => true,
         'overlay_opacity'         => 0.7,
-        'edge_to_edge_mode'       => false,
         'overlay_padding_vertical'   => 0,
         'overlay_padding_horizontal' => 0,
         'close_size_px'           => 36,

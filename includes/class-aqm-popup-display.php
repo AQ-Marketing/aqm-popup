@@ -24,7 +24,7 @@ class AQM_Popup_Display {
         }
         $settings = aqm_popup_get_settings();
 
-        if ( empty( $settings['layout_id'] ) ) {
+        if ( ! $this->has_content( $settings ) ) {
             return false;
         }
         if ( ! $this->has_any_trigger_enabled( $settings ) ) {
@@ -48,6 +48,13 @@ class AQM_Popup_Display {
     private function is_test_mode_active() {
         $settings = aqm_popup_get_settings();
         return ! empty( $settings['test_mode_enabled'] ) && (int) $settings['test_mode_page_id'] > 0;
+    }
+
+    private function has_content( $settings ) {
+        return (int) $settings['content_image_id'] > 0
+            || '' !== trim( (string) $settings['content_heading'] )
+            || '' !== trim( (string) $settings['content_body'] )
+            || ( '' !== trim( (string) $settings['content_button_label'] ) && '' !== trim( (string) $settings['content_button_url'] ) );
     }
 
     private function has_any_trigger_enabled( $settings ) {
@@ -102,17 +109,12 @@ class AQM_Popup_Display {
         if ( ! $this->should_run() ) {
             return;
         }
-        $settings  = aqm_popup_get_settings();
-        $layout_id = (int) $settings['layout_id'];
-        $layout    = get_post( $layout_id );
+        $settings = aqm_popup_get_settings();
 
-        if ( ! $layout || 'et_pb_layout' !== $layout->post_type ) {
-            aqm_popup_debug_log( 'Configured layout_id=' . $layout_id . ' is not a valid et_pb_layout.' );
+        $content = $this->build_content( $settings );
+        if ( '' === $content ) {
             return;
         }
-
-        $content = apply_filters( 'the_content', $layout->post_content );
-        $content = str_replace( ']]>', ']]&gt;', $content );
 
         $opacity = min( 1, max( 0, (float) $settings['overlay_opacity'] ) );
 
@@ -138,9 +140,6 @@ class AQM_Popup_Display {
         $style_overlay    = implode( '; ', $overlay_styles ) . ';';
 
         $overlay_classes = array( 'aqm-popup-overlay' );
-        if ( ! empty( $settings['edge_to_edge_mode'] ) ) {
-            $overlay_classes[] = 'aqm-popup-edge-to-edge';
-        }
 
         // User-customizable inline styles: emit one <style> block scoped to
         // the popup elements. Selectors use IDs (1,0,0) so values reliably
@@ -153,6 +152,15 @@ class AQM_Popup_Display {
         $close_icon_sz = (int) round( $close_size * 0.5 );
         $popup_border  = (string) $settings['popup_border'];
         $popup_radius  = max( 0, min( 200, (int) $settings['popup_border_radius_px'] ) );
+
+        // Body styling (validated hex colors + clamped ints + enum align).
+        $body_bg     = $this->safe_hex( $settings['style_bg_color'], '#ffffff' );
+        $body_text   = $this->safe_hex( $settings['style_text_color'], '#1d2327' );
+        $btn_bg      = $this->safe_hex( $settings['style_button_bg'], '#c10f30' );
+        $btn_text    = $this->safe_hex( $settings['style_button_text_color'], '#ffffff' );
+        $max_width   = max( 240, min( 1200, (int) $settings['style_max_width'] ) );
+        $padding     = max( 0, min( 96, (int) $settings['style_padding'] ) );
+        $align       = ( 'left' === $settings['style_align'] ) ? 'left' : 'center';
 
         $inline_rules   = array();
         $inline_rules[] = sprintf(
@@ -168,28 +176,41 @@ class AQM_Popup_Display {
             $close_icon_sz
         );
 
-        // Popup border / radius — applied to the container so it sits tight
-        // around the rendered Divi content regardless of Imagify's <picture>
-        // wrapper or which element Divi targeted with its own border CSS.
-        $container_decls = array();
+        // Container width + optional border / radius. Width is capped to the
+        // viewport so it never overflows on small screens.
+        $container_decls   = array();
+        $container_decls[] = sprintf( 'width:min(%dpx,94vw)', $max_width );
         if ( '' !== $popup_border ) {
             $container_decls[] = sprintf( 'border:%s', $popup_border );
         }
         if ( $popup_radius > 0 ) {
             $container_decls[] = sprintf( 'border-radius:%dpx', $popup_radius );
-            // overflow: hidden so the image clips to the rounded corners.
-            // Doesn't reintroduce scrollbars because image fitting is via
-            // max-width/max-height on the image itself, not container scroll.
+            // overflow: hidden so the image + content clip to the rounded corners.
             $container_decls[] = 'overflow:hidden';
         }
-        if ( ! empty( $container_decls ) ) {
-            $inline_rules[] = sprintf(
-                '#aqm-popup-container{%s}',
-                implode( ';', $container_decls )
-            );
-        }
+        $inline_rules[] = sprintf(
+            '#aqm-popup-container{%s}',
+            implode( ';', $container_decls )
+        );
 
-        echo '<style id="aqm-popup-inline-style">' . implode( '', $inline_rules ) . '</style>'; // phpcs:ignore WordPress.Security.EscapeOutput -- values are sanitized via sanitize_css_value() + int casts in the admin sanitize callback.
+        // Popup body styling.
+        $inline_rules[] = sprintf(
+            '#aqm-popup-content .aqm-popup-built{background:%1$s;color:%2$s;text-align:%3$s}',
+            $body_bg,
+            $body_text,
+            $align
+        );
+        $inline_rules[] = sprintf(
+            '#aqm-popup-content .aqm-popup-built__body{padding:%dpx}',
+            $padding
+        );
+        $inline_rules[] = sprintf(
+            '#aqm-popup-content .aqm-popup-built__btn{background:%1$s;color:%2$s}',
+            $btn_bg,
+            $btn_text
+        );
+
+        echo '<style id="aqm-popup-inline-style">' . implode( '', $inline_rules ) . '</style>'; // phpcs:ignore WordPress.Security.EscapeOutput -- values are validated hex colors + clamped ints + enum align in the admin sanitize callback and re-validated here.
         ?>
         <div id="aqm-popup-overlay" class="<?php echo esc_attr( implode( ' ', $overlay_classes ) ); ?>" hidden role="dialog" aria-modal="true" aria-label="<?php esc_attr_e( 'Popup', 'aqm-popup' ); ?>" style="<?php echo esc_attr( $style_overlay ); ?>">
             <div id="aqm-popup-container" class="aqm-popup-container">
@@ -199,10 +220,65 @@ class AQM_Popup_Display {
                     </svg>
                 </button>
                 <div id="aqm-popup-content" class="aqm-popup-content">
-                    <?php echo $content; // phpcs:ignore WordPress.Security.EscapeOutput -- Output is Divi shortcode HTML processed via apply_filters('the_content', ...). ?>
+                    <?php echo $content; // phpcs:ignore WordPress.Security.EscapeOutput -- $content is assembled in build_content() entirely from escaped pieces (esc_html / esc_url / wp_get_attachment_image). ?>
                 </div>
             </div>
         </div>
         <?php
+    }
+
+    /**
+     * Assemble the popup body HTML from the saved content fields. Every dynamic
+     * value is escaped at the point of output, so the returned string is safe to
+     * echo directly.
+     */
+    private function build_content( $settings ) {
+        $image_id = (int) $settings['content_image_id'];
+        $heading  = trim( (string) $settings['content_heading'] );
+        $body     = trim( (string) $settings['content_body'] );
+        $label    = trim( (string) $settings['content_button_label'] );
+        $url      = trim( (string) $settings['content_button_url'] );
+        $new_tab  = ! empty( $settings['content_button_new_tab'] );
+
+        $parts = '';
+
+        if ( $image_id > 0 ) {
+            $img = wp_get_attachment_image( $image_id, 'large', false, array(
+                'class' => 'aqm-popup-built__img',
+                'alt'   => '',
+            ) );
+            if ( $img ) {
+                $parts .= $img;
+            }
+        }
+
+        $inner = '';
+        if ( '' !== $heading ) {
+            $inner .= '<h2 class="aqm-popup-built__heading">' . esc_html( $heading ) . '</h2>';
+        }
+        if ( '' !== $body ) {
+            $inner .= '<p class="aqm-popup-built__text">' . nl2br( esc_html( $body ) ) . '</p>';
+        }
+        if ( '' !== $label && '' !== $url ) {
+            $target = $new_tab ? ' target="_blank" rel="noopener noreferrer"' : '';
+            $inner .= '<a class="aqm-popup-built__btn" href="' . esc_url( $url ) . '"' . $target . '>' . esc_html( $label ) . '</a>';
+        }
+        if ( '' !== $inner ) {
+            $parts .= '<div class="aqm-popup-built__body">' . $inner . '</div>';
+        }
+
+        if ( '' === $parts ) {
+            return '';
+        }
+        return '<div class="aqm-popup-built">' . $parts . '</div>';
+    }
+
+    /**
+     * Re-validate a stored hex color at render time. Returns #rrggbb or the
+     * fallback. Defensive: settings are already sanitized on save.
+     */
+    private function safe_hex( $value, $fallback ) {
+        $value = is_string( $value ) ? trim( $value ) : '';
+        return preg_match( '/^#[0-9a-fA-F]{6}$/', $value ) ? strtolower( $value ) : $fallback;
     }
 }

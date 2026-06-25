@@ -1,5 +1,29 @@
 # Changelog
 
+## 1.1.0 — 2026-06-25
+
+- **Build the popup right in the settings — Divi is no longer required.** New **Content** section: choose an image from the Media Library, write a headline and a paragraph, and add an optional button (label + link + open-in-new-tab). Any field left empty is skipped, so an image-only or text-only popup works too.
+- **New Popup style section:** background color, text color, button color, button text color, max width, inner padding, and text alignment — all with a live preview.
+- **The live preview now shows your real popup** (image, headline, text, button, and colors) instead of a placeholder, updating as you type.
+- **Breaking change:** the Divi Library layout picker and the "Edge-to-edge content" option were removed. Sites that were using a Divi layout will show nothing until the new Content fields are filled in (no errors — the popup simply stays hidden until there's content). The popup body is now rendered by the plugin itself; Divi-specific CSS was removed.
+- Output is fully escaped (image via `wp_get_attachment_image`, text via `esc_html`, link via `esc_url`); colors are validated as hex and sizes are clamped.
+
+## 1.0.21 — 2026-06-25
+
+- **Redesigned settings page** ("Crimson & ink"). Light, wp-admin-native, easier to follow.
+  - **Branded header** with a subtle three.js particle field, a live **status chip** (Live / Off / Test mode) that reflects your enable + test-mode checkboxes, and the running version.
+  - **Three-column working area:** a sticky, scroll-spy **section nav** (left) that highlights the section you're in, the settings **panels** (center), and a sticky **live popup preview** (right).
+  - **Live preview** mirrors the visual settings in real time — overlay opacity + padding, popup border + radius, and the close button's size, offset, background, color, and radius. "Replay" re-plays the open animation. The popup body still comes from your Divi layout.
+  - **Sticky save bar** so "Save changes" is always reachable.
+  - Restyled inputs, selects, checkboxes (crimson focus ring + accent), descriptions, and buttons.
+- **Motion** uses GSAP (load reveal, nav indicator, preview) and three.js (header), all feature-detected. If the libraries are blocked, or you have "reduce motion" enabled, the page renders as a clean, fully functional static page. Animation is decorative only at the header; everything else conveys state.
+- **No change to how settings save.** The WordPress Settings API form, nonce, sanitization, and trigger toggles are untouched — the redesign is layered on top and works with JavaScript disabled.
+
+## 1.0.20 — 2026-06-25
+
+- **Security hardening of the CSS-value fields** (Popup border, Close icon Background, Close icon Icon color). The admin sanitizer already stripped characters that could break out of the inline `<style>` block (`< > ; { } " ' \\`); it now also allowlists CSS functions. Only the color functions — `rgb()`, `rgba()`, `hsl()`, `hsla()` — are permitted. Any other function (most importantly `url()`, plus `image()` and legacy `expression()`) causes the value to be rejected and fall back to its default. This closes an admin-only vector where a CSS value like `url(https://example.com/x)` could load an external resource on every page.
+- All documented examples still work unchanged: `5px solid #ffffff`, `2px dashed #c10f30`, `10px solid rgba(255,255,255,0.5)`, `transparent`, `rgba(0,0,0,0.55)`, `#ffffff`, etc.
+
 ## 1.0.19 — 2026-05-21
 
 - **New Popup border + border-radius fields** in Behavior. Reliable border around the popup regardless of how Divi or Imagify mark up the inside.

@@ -1,10 +1,10 @@
 /**
  * AQM Popup frontend styles.
  *
- * Deliberately minimal: only the chrome (positioning, backdrop, close button,
- * test-mode badge) is styled here. All visual properties of the popup body
- * — background, padding, margins, border, border-radius, max-width, shadow,
- * typography — come from the Divi Library layout configured in settings.
+ * The plugin builds the popup body from the settings (image, headline, text,
+ * button). This file styles the chrome (backdrop, container, close button) and
+ * the built body. Colors, padding, max-width, border, and radius are applied
+ * inline by the display class from the saved settings.
  */
 
 .aqm-popup-overlay {
@@ -29,64 +29,89 @@
 }
 
 /*
- * Wrapper around the rendered Divi layout. Intentionally has no visual
- * styling — width, background, border, shadow, etc. all come from the
- * Divi section inside. `position: relative` anchors the close button.
- *
- * `overflow: hidden` + image/picture/video scaling rules below mean the
- * popup never shows a scrollbar — media inside scales to fit the viewport.
+ * Wrapper around the built popup. Width / border / radius are applied inline
+ * by the display class. `position: relative` anchors the close button.
+ * overflow: visible so an optional border + box-shadow render fully; when a
+ * border-radius is set, the display class adds overflow: hidden inline so the
+ * image and content clip to the rounded corners.
  */
 .aqm-popup-container {
     position: relative;
     max-width: var(--aqm-popup-max-w, 100vw);
     max-height: var(--aqm-popup-max-h, 100vh);
-    /*
-     * overflow: visible so Divi-side decorations on modules — box-shadow,
-     * outline, and pseudo-element accents — render beyond the container's
-     * box edge instead of being clipped. The image itself can't overflow
-     * because its max-width / max-height rules already constrain it to
-     * the container's content area. The overlay's overflow: hidden still
-     * catches anything that extends beyond the viewport.
-     */
     overflow: visible;
     transform: translateY(12px) scale(0.98);
     transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-/*
- * Image/video fit-to-viewport. v1.0.16 reintroduces aspect-preserving
- * scaling on media inside the popup so a tall image clips no longer:
- *
- *   - max-width/max-height bound the box to the overlay's content area
- *     (viewport minus overlay padding, exposed as CSS vars by the display
- *     class on the overlay element).
- *   - width: auto + height: auto override Divi's width: 100% on Fullwidth
- *     Image modules so the browser preserves the image's intrinsic aspect
- *     ratio when constraints kick in.
- *
- * Trade-off (carried over from v1.0.11's earlier attempt): on viewports
- * MUCH wider than the image's natural size, the image renders at its
- * natural intrinsic size rather than filling the container width. That's
- * the cost of preserving aspect — for square-ish images in landscape
- * viewports there's no way to both "fill width" and "fit height" without
- * stretching. Use a wider source image if you want it bigger on desktops.
- */
-#aqm-popup-content img,
-#aqm-popup-content video {
-    max-width: 100%;
-    max-height: var(--aqm-popup-max-h, 100vh);
-    width: auto;
-    height: auto;
 }
 
 .aqm-popup-overlay.is-open .aqm-popup-container {
     transform: translateY(0) scale(1);
 }
 
+/* ---- Built popup body ------------------------------------------------ */
+
 /*
- * Close icon. No background — just a white X with a drop-shadow halo for
- * visibility on light and dark content. Override `.aqm-popup-close` via
- * custom CSS if you want a circle, square, brand color, etc.
+ * The body scrolls internally if it is taller than the available viewport
+ * height (viewport minus overlay padding, exposed as --aqm-popup-max-h on the
+ * overlay), so a long popup never spills off-screen.
+ */
+.aqm-popup-built {
+    max-height: var(--aqm-popup-max-h, 92vh);
+    overflow-y: auto;
+    background: #ffffff;
+}
+
+.aqm-popup-built__img {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+.aqm-popup-built__body {
+    padding: 32px;
+}
+
+.aqm-popup-built__heading {
+    margin: 0 0 10px;
+    font-size: clamp(20px, 4vw, 28px);
+    line-height: 1.2;
+    font-weight: 700;
+}
+
+.aqm-popup-built__text {
+    margin: 0 0 18px;
+    font-size: 16px;
+    line-height: 1.55;
+}
+
+.aqm-popup-built__body > :last-child {
+    margin-bottom: 0;
+}
+
+.aqm-popup-built__btn {
+    display: inline-block;
+    margin-top: 4px;
+    padding: 12px 26px;
+    border-radius: 8px;
+    background: #c10f30;
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.2;
+    text-decoration: none;
+    transition: filter 150ms ease-out, transform 150ms ease-out;
+}
+.aqm-popup-built__btn:hover,
+.aqm-popup-built__btn:focus {
+    filter: brightness(0.92);
+    transform: translateY(-1px);
+}
+
+/* ---- Close icon ------------------------------------------------------ */
+/*
+ * No background by default — a white X with a drop-shadow halo for visibility
+ * on light and dark content. Size, offset, background, color, and radius are
+ * applied inline by the display class.
  */
 .aqm-popup-close {
     position: absolute;
@@ -133,54 +158,6 @@
 
 body.aqm-popup-open {
     overflow: hidden;
-}
-
-/*
- * Reset Divi's auto-generated layout wrappers (.et-l, .et_builder_inner_content).
- * These wrappers are injected by Divi when rendering a Library layout via
- * apply_filters('the_content', …) and can't be reached through the Divi UI,
- * so the user has no way to zero out any spacing they impose. Reset to 0.
- *
- * NOTE: Sections, rows, columns, and modules are user-controlled via Divi
- * Builder — we deliberately do NOT touch those by default. See
- * .aqm-popup-edge-to-edge below for the opt-in override.
- */
-#aqm-popup-content > .et-l,
-#aqm-popup-content > .et-l > .et_builder_inner_content,
-#aqm-popup-content .et-l--post,
-#aqm-popup-content .et_builder_inner_content {
-    padding: 0;
-    margin: 0;
-    background: transparent;
-}
-
-/*
- * Edge-to-edge content mode (opt-in via "Behavior → Edge-to-edge content" in admin).
- *
- * Overrides Divi defaults INSIDE THE POPUP for the elements where Divi's
- * defaults consistently bleed white space into edge-to-edge content:
- *   - Row padding → 0 (Divi default 27px top/bottom)
- *   - Row width → 100% (Divi default is 80% of section — beats `.et_pb_row.et_pb_equal_columns`
- *     at 0,2,0, hence our 0,2,0 selector)
- *   - Column padding → 0
- *   - Image-module bottom margin → 0
- *
- * Section padding is INTENTIONALLY NOT touched here — it's purely controlled
- * by Divi UI (Section settings → Design → Spacing → Padding). Set to 0 for
- * full edge-to-edge images, or any value for card-style popups with breathing
- * room. This is consistent with the broader "Divi controls all popup styling"
- * principle ([[Decision - Divi Controls All Popup Styling]] in vault).
- */
-.aqm-popup-edge-to-edge .et_pb_row,
-.aqm-popup-edge-to-edge .et_pb_column {
-    padding: 0;
-}
-.aqm-popup-edge-to-edge .et_pb_row {
-    width: 100%;
-    max-width: 100%;
-}
-.aqm-popup-edge-to-edge .et_pb_module {
-    margin-bottom: 0;
 }
 
 @media (prefers-reduced-motion: reduce) {

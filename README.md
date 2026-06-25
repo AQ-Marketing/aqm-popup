@@ -1,12 +1,11 @@
 # AQM Popup
 
-A lightweight site-wide popup plugin for Divi 4 sites. Renders an existing **Divi Library layout** as the popup content, so you build the popup with the Divi Builder — no separate WYSIWYG.
+A lightweight site-wide popup plugin. Build the popup right in the settings — an image, a headline, a paragraph, and an optional button — with configurable triggers, frequency caps, and a live preview. No page builder required.
 
 ## Requirements
 
 - WordPress 5.2+
 - PHP 7.2+
-- Divi theme (or any theme that registers the `et_pb_layout` post type)
 
 ## Install
 
@@ -15,14 +14,23 @@ A lightweight site-wide popup plugin for Divi 4 sites. Renders an existing **Div
 
 ## Configure
 
-WP Admin → **AQM Popup**.
+WP Admin → **AQM Popup**. The settings page has a sticky section nav, the settings panels, and a **live preview** that mirrors your content and styling as you edit.
 
-### General
+### Content
 
 | Setting | Notes |
 |---|---|
 | **Enable popup** | Master on/off. When off, no frontend assets are enqueued. |
-| **Divi Library layout** | Pick a layout from Divi → Divi Library. Its rendered output becomes the popup body. |
+| **Image** | Choose an image from the Media Library. Sits flush at the top of the popup. Optional. |
+| **Headline** | Bold title at the top of the text. Optional. |
+| **Text** | A short paragraph. Line breaks are preserved. Optional. |
+| **Button label / link** | A call-to-action button. Both a label and a link are required for the button to show. Optionally open the link in a new tab. |
+
+Any field left empty is skipped — so an image-only popup or a text-only popup both work. The popup only shows once at least one of these is filled in.
+
+### Popup style
+
+Background color, text color, button color, button text color, max width, inner padding, and text alignment (left or center). Colors use a native color picker; everything updates in the live preview.
 
 ### Triggers
 
@@ -38,6 +46,18 @@ Enable any combination. The popup appears as soon as the **first** enabled trigg
 - **Max shows per session** — how many times the popup can appear in a single browser session. Resets when the tab closes.
 - **Cooldown after dismissal (days)** — once dismissed, the popup is suppressed for this many days. Stored in `localStorage`, so it persists across sessions. Set to `0` to disable the cooldown.
 
+### Behavior
+
+- **Close on click outside** — clicking the dark overlay dismisses the popup (and starts the cooldown).
+- **Close on ESC key** — pressing ESC dismisses.
+- **Overlay opacity** — the dark backdrop behind the popup, 0 (transparent) to 1 (opaque black).
+- **Overlay padding** — inset the popup from the viewport edges.
+- **Popup border / border radius** — an optional border and rounded corners around the whole popup.
+
+### Close icon
+
+Style the X button: size, distance from the corner, background, icon color, and border radius.
+
 ### Test mode
 
 For previewing the popup without going live to your visitors:
@@ -45,43 +65,11 @@ For previewing the popup without going live to your visitors:
 - **Enable test mode** — when on, the popup shows **only** on the selected test page below, and ignores all frequency caps. It does **not** show on any other page.
 - **Test page** — pick a page. The dropdown includes drafts (so you can test on a private page that only logged-in editors can see).
 
-Test mode is independent of the master **Enable popup** toggle, so you can preview before going live or test new triggers without affecting your production popup. The popup renders identically in test mode and production — what you see during preview is exactly what visitors will see.
-
-### Behavior
-
-- **Close on click outside** — clicking the dark overlay dismisses the popup (and starts the cooldown).
-- **Close on ESC key** — pressing ESC dismisses.
-- **Overlay opacity** — the dark backdrop behind the popup, 0 (transparent) to 1 (opaque black).
-
-The close icon (X) in the top-right is always visible.
-
-## Styling the popup
-
-All visual properties of the popup body — **background, padding, margins, border, border-radius, max-width, box-shadow, typography** — come from your selected Divi Library layout. The plugin contributes nothing to the popup's appearance except the dark backdrop and the close icon.
-
-In practice:
-
-- **Width** — set on your Divi section or row (Section settings → Design → Sizing → Max Width). The popup wraps to your section's width.
-- **Padding / margins** — use Divi's padding/margin controls on the section, row, or modules inside.
-- **Border + border-radius** — set on the section (Design → Border).
-- **Background** — set on the section's Content → Background.
-- **Shadow** — set on the section (Design → Box Shadow).
-- **Typography** — Divi modules carry their own typography settings.
-
-If you want the popup to look like a typical centered modal card, build your Divi layout with a single Section that has a white background, a border-radius (e.g. 8px), a soft box-shadow, internal padding (e.g. 40px), and a max-width (e.g. 600px). The plugin will center that section in the viewport with the dark backdrop behind it.
-
-### Overriding the plugin's chrome with custom CSS
-
-If you need to restyle the close icon:
-
-```css
-/* in your Divi Theme Options → Custom CSS */
-.aqm-popup-close { background: rebeccapurple; }
-```
+Test mode is independent of the master **Enable popup** toggle, so you can preview before going live or test new triggers without affecting your production popup.
 
 ## How it works
 
-The plugin renders a hidden overlay in the page footer that contains your selected Divi Library layout, processed through `apply_filters('the_content', …)` so all `et_pb_*` shortcodes resolve correctly. A small vanilla-JS script (no jQuery on the frontend) wires up the triggers and storage-based frequency caps.
+The plugin renders a hidden overlay in the page footer containing the popup you built (image, headline, text, button). All output is escaped: the image via `wp_get_attachment_image()`, text via `esc_html()`, the link via `esc_url()`; colors are validated as hex and sizes are clamped. A small vanilla-JS script (no jQuery on the frontend) wires up the triggers and storage-based frequency caps.
 
 ### Storage keys
 
@@ -92,15 +80,14 @@ The plugin renders a hidden overlay in the page footer that contains your select
 
 To reset for a single visitor (e.g. during QA), open DevTools → Application → Storage and delete those two keys.
 
-## Limitations (v1)
+## Limitations
 
 - One popup site-wide. No per-page targeting and no support for multiple popups — every enabled page sees the same one.
 - Exit intent is desktop-only.
-- The popup body inherits whatever Divi assets are already loaded on the page. If your Library layout uses a Divi module that no other content on the page uses, its CSS may not be enqueued — pick layouts that use common modules (Section / Row / Text / Button / Image), or activate Divi's "Static CSS File Generation" to make module CSS available globally.
 
 ## Updates
 
-The plugin checks the latest tag on `https://github.com/AQ-Marketing/aqm-popup` every 6 hours and surfaces available updates on the WP Plugins screen. Tag names like `v1.0.1` and `1.0.1` are both accepted.
+The plugin checks the latest tag on `https://github.com/AQ-Marketing/aqm-popup` every 6 hours and surfaces available updates on the WP Plugins screen. Tag names like `v1.1.0` and `1.1.0` are both accepted.
 
 ## License
 
