@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.1 — 2026-06-25
+
+- **Popup background image.** New **Background image** field in *Popup style* — choose an image from the Media Library to fill the whole popup behind your text and button (scaled to cover, centered). The background color shows underneath while it loads or if removed. Tip: set the text color to contrast for legibility over a photo.
+- Works on its own (a background-image-only popup gets a minimum height so it stays visible) or layered under a headline/text/button. This is separate from the top **Image** field (which sits flush at the top) and from the dark overlay backdrop.
+- The image URL is escaped via `esc_url()`; the cover/position rules live in `popup.css`. Reflected live in the preview.
+- **Close button can now sit outside the popup.** The "Distance from corner" field accepts **negative** numbers (down to -100), which float the X just past the top-right corner. To make this reliable, the popup's border and rounded corners now apply to the card itself rather than the outer container, so the container no longer clips an outside button. Shown live in the preview.
+
 ## 1.1.0 — 2026-06-25
 
 - **Build the popup right in the settings — Divi is no longer required.** New **Content** section: choose an image from the Media Library, write a headline and a paragraph, and add an optional button (label + link + open-in-new-tab). Any field left empty is skipped, so an image-only or text-only popup works too.

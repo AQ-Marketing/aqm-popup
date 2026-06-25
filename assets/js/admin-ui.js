@@ -210,12 +210,18 @@
         var replay = document.querySelector('[data-aqm-replay]');
         if (!form || !overlay || !popup) { return; }
 
+        var pvContent = document.querySelector('[data-aqm-preview-content]');
         var pvImg = document.querySelector('[data-aqm-preview-img]');
         var pvBody = document.querySelector('[data-aqm-preview-body]');
         var pvHeading = document.querySelector('[data-aqm-preview-heading]');
         var pvText = document.querySelector('[data-aqm-preview-text]');
         var pvBtn = document.querySelector('[data-aqm-preview-btn]');
-        var imgThumb = document.querySelector('[data-aqm-image-preview] img');
+
+        // Read the chosen image URL for a given field key from its thumbnail.
+        function imgUrlFor(key) {
+            var el = document.querySelector('[data-aqm-image-field][data-aqm-image-key="' + key + '"] [data-aqm-image-preview] img');
+            return el ? el.getAttribute('src') : '';
+        }
 
         function field(name) {
             return form.querySelector('[name="aqm_popup_settings[' + name + ']"]');
@@ -246,17 +252,35 @@
             var radius = Math.max(0, num('popup_border_radius_px', 0));
             popup.style.border = border ? border : 'none';
             popup.style.borderRadius = (radius * 0.32) + 'px';
-            popup.style.overflow = radius > 0 ? 'hidden' : 'visible';
+            // Keep the popup itself unclipped so a negative-offset close button
+            // can sit outside; clip the image on the inner content wrapper.
+            popup.style.overflow = 'visible';
+            if (pvContent) {
+                pvContent.style.borderRadius = (radius * 0.32) + 'px';
+                pvContent.style.overflow = 'hidden';
+            }
 
             // ---- body styling ----
-            popup.style.background = str('style_bg_color', '#ffffff');
+            popup.style.backgroundColor = str('style_bg_color', '#ffffff');
             popup.style.color = str('style_text_color', '#1d2327');
             popup.style.textAlign = (str('style_align', 'center') === 'left') ? 'left' : 'center';
             if (pvBody) { pvBody.style.padding = clamp(num('style_padding', 32), 0, 96) * 0.4 + 'px'; }
 
+            // ---- background image (covers the popup, behind the content) ----
+            var bgUrl = imgUrlFor('style_bg_image_id');
+            if (bgUrl) {
+                popup.style.backgroundImage = 'url("' + bgUrl + '")';
+                popup.style.backgroundSize = 'cover';
+                popup.style.backgroundPosition = 'center';
+                popup.style.backgroundRepeat = 'no-repeat';
+                popup.style.minHeight = '140px';
+            } else {
+                popup.style.backgroundImage = 'none';
+                popup.style.minHeight = '';
+            }
+
             // ---- content ----
-            imgThumb = document.querySelector('[data-aqm-image-preview] img');
-            var imgUrl = imgThumb ? imgThumb.getAttribute('src') : '';
+            var imgUrl = imgUrlFor('content_image_id');
             if (pvImg) {
                 if (imgUrl) { pvImg.src = imgUrl; pvImg.hidden = false; }
                 else { pvImg.removeAttribute('src'); pvImg.hidden = true; }
@@ -287,7 +311,7 @@
             if (closeBtn) {
                 var f = 0.5;
                 var size = clamp(num('close_size_px', 36), 16, 200);
-                var offset = clamp(num('close_offset_px', 10), 0, 100);
+                var offset = clamp(num('close_offset_px', 10), -100, 100);
                 var cradius = clamp(num('close_border_radius_px', 0), 0, 100);
                 closeBtn.style.width = (size * f) + 'px';
                 closeBtn.style.height = (size * f) + 'px';
@@ -325,55 +349,59 @@
     }
 
     /* ----------------------------------------------------------------
-     * Image field — WordPress Media Library picker.
+     * Image fields — WordPress Media Library picker (one per field).
      * ---------------------------------------------------------------- */
     function initMedia() {
-        var fieldEl = document.querySelector('[data-aqm-image-field]');
-        if (!fieldEl) { return; }
-        var input = fieldEl.querySelector('[data-aqm-image-input]');
-        var preview = fieldEl.querySelector('[data-aqm-image-preview]');
-        var chooseBtn = fieldEl.querySelector('[data-aqm-image-choose]');
-        var removeBtn = fieldEl.querySelector('[data-aqm-image-remove]');
-        if (!input || !chooseBtn) { return; }
+        var fields = document.querySelectorAll('[data-aqm-image-field]');
+        if (!fields.length) { return; }
+        var hasMedia = !!(window.wp && window.wp.media);
 
-        // No wp.media (rare) — leave the saved value intact, just hide the button.
-        if (!window.wp || !window.wp.media) { chooseBtn.style.display = 'none'; return; }
+        fields.forEach(function (fieldEl) {
+            var input = fieldEl.querySelector('[data-aqm-image-input]');
+            var preview = fieldEl.querySelector('[data-aqm-image-preview]');
+            var chooseBtn = fieldEl.querySelector('[data-aqm-image-choose]');
+            var removeBtn = fieldEl.querySelector('[data-aqm-image-remove]');
+            if (!input || !chooseBtn) { return; }
 
-        function setImage(id, url) {
-            input.value = id ? String(id) : '';
-            if (preview) {
-                if (url) {
-                    var img = preview.querySelector('img') || document.createElement('img');
-                    img.src = url;
-                    img.alt = '';
-                    if (!img.parentNode) { preview.appendChild(img); }
-                    preview.hidden = false;
-                } else {
-                    preview.innerHTML = '';
-                    preview.hidden = true;
+            // No wp.media (rare) — leave the saved value intact, just hide the button.
+            if (!hasMedia) { chooseBtn.style.display = 'none'; return; }
+
+            function setImage(id, url) {
+                input.value = id ? String(id) : '';
+                if (preview) {
+                    if (url) {
+                        var img = preview.querySelector('img') || document.createElement('img');
+                        img.src = url;
+                        img.alt = '';
+                        if (!img.parentNode) { preview.appendChild(img); }
+                        preview.hidden = false;
+                    } else {
+                        preview.innerHTML = '';
+                        preview.hidden = true;
+                    }
                 }
+                if (removeBtn) { removeBtn.hidden = !url; }
+                // Nudge the live preview to re-read.
+                input.dispatchEvent(new Event('input', { bubbles: true }));
             }
-            if (removeBtn) { removeBtn.hidden = !url; }
-            // Nudge the live preview to re-read.
-            input.dispatchEvent(new Event('input', { bubbles: true }));
-        }
 
-        var frame = null;
-        chooseBtn.addEventListener('click', function (e) {
-            e.preventDefault();
-            if (frame) { frame.open(); return; }
-            frame = window.wp.media({ title: (UI.chooseImage || 'Choose popup image'), button: { text: (UI.useImage || 'Use this image') }, multiple: false, library: { type: 'image' } });
-            frame.on('select', function () {
-                var att = frame.state().get('selection').first().toJSON();
-                var sizes = att.sizes || {};
-                var pick = sizes.large || sizes.medium_large || sizes.medium || null;
-                setImage(att.id, pick ? pick.url : att.url);
+            var frame = null;
+            chooseBtn.addEventListener('click', function (e) {
+                e.preventDefault();
+                if (frame) { frame.open(); return; }
+                frame = window.wp.media({ title: (UI.chooseImage || 'Choose popup image'), button: { text: (UI.useImage || 'Use this image') }, multiple: false, library: { type: 'image' } });
+                frame.on('select', function () {
+                    var att = frame.state().get('selection').first().toJSON();
+                    var sizes = att.sizes || {};
+                    var pick = sizes.large || sizes.medium_large || sizes.medium || null;
+                    setImage(att.id, pick ? pick.url : att.url);
+                });
+                frame.open();
             });
-            frame.open();
+            if (removeBtn) {
+                removeBtn.addEventListener('click', function (e) { e.preventDefault(); setImage(0, ''); });
+            }
         });
-        if (removeBtn) {
-            removeBtn.addEventListener('click', function (e) { e.preventDefault(); setImage(0, ''); });
-        }
     }
 
     /* ----------------------------------------------------------------

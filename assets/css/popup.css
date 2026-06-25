@@ -56,9 +56,23 @@
  * overlay), so a long popup never spills off-screen.
  */
 .aqm-popup-built {
+    box-sizing: border-box;
+    width: 100%;
     max-height: var(--aqm-popup-max-h, 92vh);
     overflow-y: auto;
     background: #ffffff;
+}
+
+/*
+ * Background-image variant. The image URL is injected inline by the display
+ * class; these rules make it cover the popup. A min-height keeps the popup
+ * visible when the background image is used on its own (no text on top).
+ */
+.aqm-popup-built--bg {
+    min-height: 220px;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
 }
 
 .aqm-popup-built__img {

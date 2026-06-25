@@ -149,6 +149,7 @@ class AQM_Popup_Admin {
         );
 
         add_settings_field( 'style_bg_color',          __( 'Background color', 'aqm-popup' ),    array( $this, 'field_color' ),  self::PAGE_SLUG, 'aqm_popup_style', array( 'key' => 'style_bg_color' ) );
+        add_settings_field( 'style_bg_image_id',       __( 'Background image', 'aqm-popup' ),    array( $this, 'field_image' ),  self::PAGE_SLUG, 'aqm_popup_style', array( 'key' => 'style_bg_image_id', 'description' => __( 'Optional. Fills the whole popup behind your text and button (scaled to cover). The background color shows while it loads, or if you remove it. For readable text over a photo, set the text color to contrast.', 'aqm-popup' ) ) );
         add_settings_field( 'style_text_color',        __( 'Text color', 'aqm-popup' ),          array( $this, 'field_color' ),  self::PAGE_SLUG, 'aqm_popup_style', array( 'key' => 'style_text_color' ) );
         add_settings_field( 'style_button_bg',         __( 'Button color', 'aqm-popup' ),        array( $this, 'field_color' ),  self::PAGE_SLUG, 'aqm_popup_style', array( 'key' => 'style_button_bg' ) );
         add_settings_field( 'style_button_text_color', __( 'Button text color', 'aqm-popup' ),   array( $this, 'field_color' ),  self::PAGE_SLUG, 'aqm_popup_style', array( 'key' => 'style_button_text_color' ) );
@@ -202,7 +203,7 @@ class AQM_Popup_Admin {
         add_settings_field( 'popup_border_radius_px', __( 'Popup border radius (px)', 'aqm-popup' ), array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_behavior', array( 'key' => 'popup_border_radius_px', 'min' => 0, 'max' => 200, 'step' => 1, 'description' => __( 'Rounded corners on the popup container (and the border, if set above).', 'aqm-popup' ) ) );
 
         add_settings_field( 'close_size_px',          __( 'Button size (px)',         'aqm-popup' ), array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_close_icon', array( 'key' => 'close_size_px',         'min' => 16, 'max' => 200, 'step' => 1, 'description' => __( 'Width and height of the close button. The X icon scales proportionally (icon = button size × 0.5).', 'aqm-popup' ) ) );
-        add_settings_field( 'close_offset_px',        __( 'Distance from corner (px)','aqm-popup' ), array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_close_icon', array( 'key' => 'close_offset_px',       'min' => 0,  'max' => 100, 'step' => 1, 'description' => __( 'How far from the popup\'s top-right corner the button sits.', 'aqm-popup' ) ) );
+        add_settings_field( 'close_offset_px',        __( 'Distance from corner (px)','aqm-popup' ), array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_close_icon', array( 'key' => 'close_offset_px',       'min' => -100, 'max' => 100, 'step' => 1, 'description' => __( 'How far the button sits from the popup\'s top-right corner. Use a negative number to place it OUTSIDE the popup — e.g. -16 floats the X just past the corner.', 'aqm-popup' ) ) );
         add_settings_field( 'close_background',       __( 'Background',                'aqm-popup' ), array( $this, 'field_text' ),   self::PAGE_SLUG, 'aqm_popup_close_icon', array( 'key' => 'close_background',      'placeholder' => 'transparent', 'description' => __( 'Any valid CSS color. Examples: <code>transparent</code> (default — bare X with a drop-shadow halo), <code>rgba(0,0,0,0.55)</code> (translucent dark circle, the v1.0.0–v1.0.9 look), <code>#ffffff</code> (solid white), <code>#000</code>.', 'aqm-popup' ) ) );
         add_settings_field( 'close_icon_color',       __( 'Icon color',                'aqm-popup' ), array( $this, 'field_text' ),   self::PAGE_SLUG, 'aqm_popup_close_icon', array( 'key' => 'close_icon_color',      'placeholder' => '#ffffff',     'description' => __( 'Color of the X mark. Any valid CSS color.', 'aqm-popup' ) ) );
         add_settings_field( 'close_border_radius_px', __( 'Border radius (px)',        'aqm-popup' ), array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_close_icon', array( 'key' => 'close_border_radius_px','min' => 0, 'max' => 100, 'step' => 1, 'description' => __( 'Roundness of the background. Set to half the button size for a circle (e.g., 18 for a 36px button), 0 for a square.', 'aqm-popup' ) ) );
@@ -339,13 +340,15 @@ class AQM_Popup_Admin {
         }
     }
 
-    public function field_image() {
+    public function field_image( $args ) {
         $settings = aqm_popup_get_settings();
-        $id       = (int) $settings['content_image_id'];
+        $key      = isset( $args['key'] ) ? $args['key'] : 'content_image_id';
+        $id       = (int) ( isset( $settings[ $key ] ) ? $settings[ $key ] : 0 );
         $url      = $id ? wp_get_attachment_image_url( $id, 'medium' ) : '';
+        $desc     = isset( $args['description'] ) ? $args['description'] : __( 'Optional. Sits flush at the top of the popup. Leave empty for a text-only popup.', 'aqm-popup' );
         ?>
-        <div class="aqm-image-field" data-aqm-image-field>
-            <input type="hidden" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[content_image_id]" value="<?php echo esc_attr( $id ); ?>" data-aqm-image-input />
+        <div class="aqm-image-field" data-aqm-image-field data-aqm-image-key="<?php echo esc_attr( $key ); ?>">
+            <input type="hidden" name="<?php echo esc_attr( self::OPTION_KEY ); ?>[<?php echo esc_attr( $key ); ?>]" value="<?php echo esc_attr( $id ); ?>" data-aqm-image-input />
             <div class="aqm-image-field__preview" data-aqm-image-preview <?php echo $url ? '' : 'hidden'; ?>>
                 <?php if ( $url ) : ?><img src="<?php echo esc_url( $url ); ?>" alt="" /><?php endif; ?>
             </div>
@@ -353,7 +356,7 @@ class AQM_Popup_Admin {
                 <button type="button" class="button" data-aqm-image-choose><?php esc_html_e( 'Choose image', 'aqm-popup' ); ?></button>
                 <button type="button" class="button-link aqm-image-field__remove" data-aqm-image-remove <?php echo $url ? '' : 'hidden'; ?>><?php esc_html_e( 'Remove', 'aqm-popup' ); ?></button>
             </p>
-            <p class="description"><?php esc_html_e( 'Optional. Sits flush at the top of the popup. Leave empty for a text-only popup.', 'aqm-popup' ); ?></p>
+            <p class="description"><?php echo wp_kses_post( $desc ); ?></p>
         </div>
         <?php
     }
@@ -497,6 +500,7 @@ class AQM_Popup_Admin {
 
         // Style — colors validated as #rrggbb (fall back to default), sizes clamped.
         $out['style_bg_color']          = $this->sanitize_hex( isset( $input['style_bg_color'] ) ? $input['style_bg_color'] : '', $defaults['style_bg_color'] );
+        $out['style_bg_image_id']       = isset( $input['style_bg_image_id'] ) ? max( 0, (int) $input['style_bg_image_id'] ) : 0;
         $out['style_text_color']        = $this->sanitize_hex( isset( $input['style_text_color'] ) ? $input['style_text_color'] : '', $defaults['style_text_color'] );
         $out['style_button_bg']         = $this->sanitize_hex( isset( $input['style_button_bg'] ) ? $input['style_button_bg'] : '', $defaults['style_button_bg'] );
         $out['style_button_text_color'] = $this->sanitize_hex( isset( $input['style_button_text_color'] ) ? $input['style_button_text_color'] : '', $defaults['style_button_text_color'] );
@@ -530,7 +534,7 @@ class AQM_Popup_Admin {
         $out['popup_border_radius_px'] = isset( $input['popup_border_radius_px'] ) ? min( 200, max( 0, (int) $input['popup_border_radius_px'] ) ) : 0;
 
         $out['close_size_px']          = isset( $input['close_size_px'] )          ? min( 200, max( 16, (int) $input['close_size_px'] ) )        : $defaults['close_size_px'];
-        $out['close_offset_px']        = isset( $input['close_offset_px'] )        ? min( 100, max( 0,  (int) $input['close_offset_px'] ) )      : $defaults['close_offset_px'];
+        $out['close_offset_px']        = isset( $input['close_offset_px'] )        ? min( 100, max( -100, (int) $input['close_offset_px'] ) )    : $defaults['close_offset_px'];
         $out['close_background']       = $this->sanitize_css_value( isset( $input['close_background'] ) ? $input['close_background'] : $defaults['close_background'] );
         $out['close_icon_color']       = $this->sanitize_css_value( isset( $input['close_icon_color'] ) ? $input['close_icon_color'] : $defaults['close_icon_color'] );
         $out['close_border_radius_px'] = isset( $input['close_border_radius_px'] ) ? min( 100, max( 0, (int) $input['close_border_radius_px'] ) ) : $defaults['close_border_radius_px'];

@@ -52,6 +52,7 @@ class AQM_Popup_Display {
 
     private function has_content( $settings ) {
         return (int) $settings['content_image_id'] > 0
+            || (int) $settings['style_bg_image_id'] > 0
             || '' !== trim( (string) $settings['content_heading'] )
             || '' !== trim( (string) $settings['content_body'] )
             || ( '' !== trim( (string) $settings['content_button_label'] ) && '' !== trim( (string) $settings['content_button_url'] ) );
@@ -145,7 +146,7 @@ class AQM_Popup_Display {
         // the popup elements. Selectors use IDs (1,0,0) so values reliably
         // beat the class-based defaults in popup.css (0,1,0).
         $close_size    = max( 16, min( 200, (int) $settings['close_size_px'] ) );
-        $close_offset  = max( 0, min( 100, (int) $settings['close_offset_px'] ) );
+        $close_offset  = max( -100, min( 100, (int) $settings['close_offset_px'] ) );
         $close_bg      = (string) $settings['close_background'];
         $close_color   = (string) $settings['close_icon_color'];
         $close_radius  = max( 0, min( 100, (int) $settings['close_border_radius_px'] ) );
@@ -162,6 +163,11 @@ class AQM_Popup_Display {
         $padding     = max( 0, min( 96, (int) $settings['style_padding'] ) );
         $align       = ( 'left' === $settings['style_align'] ) ? 'left' : 'center';
 
+        // Optional popup background image (cover). cover/position/repeat live in
+        // popup.css on .aqm-popup-built--bg; only the URL is injected here.
+        $bg_image_id  = (int) $settings['style_bg_image_id'];
+        $bg_image_url = $bg_image_id > 0 ? wp_get_attachment_image_url( $bg_image_id, 'large' ) : '';
+
         $inline_rules   = array();
         $inline_rules[] = sprintf(
             '#aqm-popup-close{width:%1$dpx;height:%1$dpx;top:%2$dpx;right:%2$dpx;background:%3$s;color:%4$s;border-radius:%5$dpx}',
@@ -176,30 +182,25 @@ class AQM_Popup_Display {
             $close_icon_sz
         );
 
-        // Container width + optional border / radius. Width is capped to the
-        // viewport so it never overflows on small screens.
-        $container_decls   = array();
-        $container_decls[] = sprintf( 'width:min(%dpx,94vw)', $max_width );
+        // Container: width only. It stays overflow:visible (popup.css) so the
+        // close button can be positioned OUTSIDE the popup with a negative
+        // offset without being clipped.
+        $inline_rules[] = sprintf( '#aqm-popup-container{width:min(%dpx,94vw)}', $max_width );
+
+        // Popup body styling. Border + radius go on the card itself, not the
+        // container, so the container never clips an outside close button. The
+        // card already has overflow-y:auto, which clips its image to the radius.
+        $built_decls = sprintf( 'background-color:%1$s;color:%2$s;text-align:%3$s', $body_bg, $body_text, $align );
+        if ( '' !== $bg_image_url ) {
+            $built_decls .= sprintf( ';background-image:url(%s)', esc_url( $bg_image_url ) );
+        }
         if ( '' !== $popup_border ) {
-            $container_decls[] = sprintf( 'border:%s', $popup_border );
+            $built_decls .= sprintf( ';border:%s', $popup_border );
         }
         if ( $popup_radius > 0 ) {
-            $container_decls[] = sprintf( 'border-radius:%dpx', $popup_radius );
-            // overflow: hidden so the image + content clip to the rounded corners.
-            $container_decls[] = 'overflow:hidden';
+            $built_decls .= sprintf( ';border-radius:%dpx', $popup_radius );
         }
-        $inline_rules[] = sprintf(
-            '#aqm-popup-container{%s}',
-            implode( ';', $container_decls )
-        );
-
-        // Popup body styling.
-        $inline_rules[] = sprintf(
-            '#aqm-popup-content .aqm-popup-built{background:%1$s;color:%2$s;text-align:%3$s}',
-            $body_bg,
-            $body_text,
-            $align
-        );
+        $inline_rules[] = sprintf( '#aqm-popup-content .aqm-popup-built{%s}', $built_decls );
         $inline_rules[] = sprintf(
             '#aqm-popup-content .aqm-popup-built__body{padding:%dpx}',
             $padding
@@ -233,12 +234,13 @@ class AQM_Popup_Display {
      * echo directly.
      */
     private function build_content( $settings ) {
-        $image_id = (int) $settings['content_image_id'];
-        $heading  = trim( (string) $settings['content_heading'] );
-        $body     = trim( (string) $settings['content_body'] );
-        $label    = trim( (string) $settings['content_button_label'] );
-        $url      = trim( (string) $settings['content_button_url'] );
-        $new_tab  = ! empty( $settings['content_button_new_tab'] );
+        $image_id    = (int) $settings['content_image_id'];
+        $bg_image_id = (int) $settings['style_bg_image_id'];
+        $heading     = trim( (string) $settings['content_heading'] );
+        $body        = trim( (string) $settings['content_body'] );
+        $label       = trim( (string) $settings['content_button_label'] );
+        $url         = trim( (string) $settings['content_button_url'] );
+        $new_tab     = ! empty( $settings['content_button_new_tab'] );
 
         $parts = '';
 
@@ -267,10 +269,17 @@ class AQM_Popup_Display {
             $parts .= '<div class="aqm-popup-built__body">' . $inner . '</div>';
         }
 
-        if ( '' === $parts ) {
+        // A background image alone is enough to render (it gets a min-height in
+        // CSS so it stays visible even with no text on top).
+        if ( '' === $parts && $bg_image_id <= 0 ) {
             return '';
         }
-        return '<div class="aqm-popup-built">' . $parts . '</div>';
+
+        $classes = 'aqm-popup-built';
+        if ( $bg_image_id > 0 ) {
+            $classes .= ' aqm-popup-built--bg';
+        }
+        return '<div class="' . esc_attr( $classes ) . '">' . $parts . '</div>';
     }
 
     /**
