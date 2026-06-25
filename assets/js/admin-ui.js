@@ -222,6 +222,11 @@
             var el = document.querySelector('[data-aqm-image-field][data-aqm-image-key="' + key + '"] [data-aqm-image-preview] img');
             return el ? el.getAttribute('src') : '';
         }
+        function hexToRgb(hex) {
+            hex = String(hex).replace('#', '');
+            if (hex.length !== 6) { return '0,0,0'; }
+            return parseInt(hex.slice(0, 2), 16) + ',' + parseInt(hex.slice(2, 4), 16) + ',' + parseInt(hex.slice(4, 6), 16);
+        }
 
         function field(name) {
             return form.querySelector('[name="aqm_popup_settings[' + name + ']"]');
@@ -269,7 +274,13 @@
             // ---- background image (covers the popup, behind the content) ----
             var bgUrl = imgUrlFor('style_bg_image_id');
             if (bgUrl) {
-                popup.style.backgroundImage = 'url("' + bgUrl + '")';
+                var layers = 'url("' + bgUrl + '")';
+                var ovA = clamp(num('style_bg_overlay_opacity', 0), 0, 1);
+                if (ovA > 0) {
+                    var rgb = hexToRgb(str('style_bg_overlay_color', '#000000'));
+                    layers = 'linear-gradient(rgba(' + rgb + ',' + ovA + '),rgba(' + rgb + ',' + ovA + ')),' + layers;
+                }
+                popup.style.backgroundImage = layers;
                 popup.style.backgroundSize = 'cover';
                 popup.style.backgroundPosition = 'center';
                 popup.style.backgroundRepeat = 'no-repeat';

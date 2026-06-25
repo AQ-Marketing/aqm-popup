@@ -150,6 +150,8 @@ class AQM_Popup_Admin {
 
         add_settings_field( 'style_bg_color',          __( 'Background color', 'aqm-popup' ),    array( $this, 'field_color' ),  self::PAGE_SLUG, 'aqm_popup_style', array( 'key' => 'style_bg_color' ) );
         add_settings_field( 'style_bg_image_id',       __( 'Background image', 'aqm-popup' ),    array( $this, 'field_image' ),  self::PAGE_SLUG, 'aqm_popup_style', array( 'key' => 'style_bg_image_id', 'description' => __( 'Optional. Fills the whole popup behind your text and button (scaled to cover). The background color shows while it loads, or if you remove it. For readable text over a photo, set the text color to contrast.', 'aqm-popup' ) ) );
+        add_settings_field( 'style_bg_overlay_color',   __( 'Image overlay color', 'aqm-popup' ),  array( $this, 'field_color' ),  self::PAGE_SLUG, 'aqm_popup_style', array( 'key' => 'style_bg_overlay_color' ) );
+        add_settings_field( 'style_bg_overlay_opacity', __( 'Image overlay opacity', 'aqm-popup' ),array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_style', array( 'key' => 'style_bg_overlay_opacity', 'min' => 0, 'max' => 1, 'step' => '0.05', 'description' => __( 'A tint laid OVER the background image (behind your text) so text stays readable. 0 = no overlay. Try the overlay color black at 0.4 to darken a photo. Only applies when a background image is set; this is separate from the dark backdrop in Behavior.', 'aqm-popup' ) ) );
         add_settings_field( 'style_text_color',        __( 'Text color', 'aqm-popup' ),          array( $this, 'field_color' ),  self::PAGE_SLUG, 'aqm_popup_style', array( 'key' => 'style_text_color' ) );
         add_settings_field( 'style_button_bg',         __( 'Button color', 'aqm-popup' ),        array( $this, 'field_color' ),  self::PAGE_SLUG, 'aqm_popup_style', array( 'key' => 'style_button_bg' ) );
         add_settings_field( 'style_button_text_color', __( 'Button text color', 'aqm-popup' ),   array( $this, 'field_color' ),  self::PAGE_SLUG, 'aqm_popup_style', array( 'key' => 'style_button_text_color' ) );
@@ -501,6 +503,8 @@ class AQM_Popup_Admin {
         // Style — colors validated as #rrggbb (fall back to default), sizes clamped.
         $out['style_bg_color']          = $this->sanitize_hex( isset( $input['style_bg_color'] ) ? $input['style_bg_color'] : '', $defaults['style_bg_color'] );
         $out['style_bg_image_id']       = isset( $input['style_bg_image_id'] ) ? max( 0, (int) $input['style_bg_image_id'] ) : 0;
+        $out['style_bg_overlay_color']  = $this->sanitize_hex( isset( $input['style_bg_overlay_color'] ) ? $input['style_bg_overlay_color'] : '', $defaults['style_bg_overlay_color'] );
+        $out['style_bg_overlay_opacity']= isset( $input['style_bg_overlay_opacity'] ) ? min( 1, max( 0, (float) $input['style_bg_overlay_opacity'] ) ) : $defaults['style_bg_overlay_opacity'];
         $out['style_text_color']        = $this->sanitize_hex( isset( $input['style_text_color'] ) ? $input['style_text_color'] : '', $defaults['style_text_color'] );
         $out['style_button_bg']         = $this->sanitize_hex( isset( $input['style_button_bg'] ) ? $input['style_button_bg'] : '', $defaults['style_button_bg'] );
         $out['style_button_text_color'] = $this->sanitize_hex( isset( $input['style_button_text_color'] ) ? $input['style_button_text_color'] : '', $defaults['style_button_text_color'] );

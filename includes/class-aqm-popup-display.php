@@ -168,6 +168,12 @@ class AQM_Popup_Display {
         $bg_image_id  = (int) $settings['style_bg_image_id'];
         $bg_image_url = $bg_image_id > 0 ? wp_get_attachment_image_url( $bg_image_id, 'large' ) : '';
 
+        // Optional tint laid over the background image (behind the content) for
+        // text legibility. Implemented as a flat gradient layered above the image
+        // in the same background-image property — no extra element needed.
+        $ov_color   = $this->safe_hex( $settings['style_bg_overlay_color'], '#000000' );
+        $ov_opacity = min( 1, max( 0, (float) $settings['style_bg_overlay_opacity'] ) );
+
         $inline_rules   = array();
         $inline_rules[] = sprintf(
             '#aqm-popup-close{width:%1$dpx;height:%1$dpx;top:%2$dpx;right:%2$dpx;background:%3$s;color:%4$s;border-radius:%5$dpx}',
@@ -192,7 +198,15 @@ class AQM_Popup_Display {
         // card already has overflow-y:auto, which clips its image to the radius.
         $built_decls = sprintf( 'background-color:%1$s;color:%2$s;text-align:%3$s', $body_bg, $body_text, $align );
         if ( '' !== $bg_image_url ) {
-            $built_decls .= sprintf( ';background-image:url(%s)', esc_url( $bg_image_url ) );
+            $img_layer = sprintf( 'url(%s)', esc_url( $bg_image_url ) );
+            if ( $ov_opacity > 0 ) {
+                $rgb   = $this->hex_to_rgb( $ov_color );
+                $a     = rtrim( rtrim( number_format( $ov_opacity, 2, '.', '' ), '0' ), '.' );
+                $scrim = sprintf( 'linear-gradient(rgba(%1$s,%2$s),rgba(%1$s,%2$s))', $rgb, $a );
+                $built_decls .= sprintf( ';background-image:%s,%s', $scrim, $img_layer );
+            } else {
+                $built_decls .= ';background-image:' . $img_layer;
+            }
         }
         if ( '' !== $popup_border ) {
             $built_decls .= sprintf( ';border:%s', $popup_border );
@@ -286,6 +300,14 @@ class AQM_Popup_Display {
      * Re-validate a stored hex color at render time. Returns #rrggbb or the
      * fallback. Defensive: settings are already sanitized on save.
      */
+    private function hex_to_rgb( $hex ) {
+        $hex = ltrim( (string) $hex, '#' );
+        if ( 6 !== strlen( $hex ) ) {
+            return '0,0,0';
+        }
+        return hexdec( substr( $hex, 0, 2 ) ) . ',' . hexdec( substr( $hex, 2, 2 ) ) . ',' . hexdec( substr( $hex, 4, 2 ) );
+    }
+
     private function safe_hex( $value, $fallback ) {
         $value = is_string( $value ) ? trim( $value ) : '';
         return preg_match( '/^#[0-9a-fA-F]{6}$/', $value ) ? strtolower( $value ) : $fallback;

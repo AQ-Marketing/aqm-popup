@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.2 — 2026-06-25
+
+- **Background-image overlay.** New **Image overlay color** + **Image overlay opacity** fields in *Popup style*. When a background image is set, this lays a tint between the image and your text (e.g. black at 0.4 to darken a photo) so the text stays readable. Opacity 0 = no overlay (default, so existing popups are unchanged). It's distinct from the dark backdrop "Overlay opacity" in Behavior. Implemented as a flat gradient layered over the image (no extra markup); reflected live in the preview.
+
 ## 1.1.1 — 2026-06-25
 
 - **Popup background image.** New **Background image** field in *Popup style* — choose an image from the Media Library to fill the whole popup behind your text and button (scaled to cover, centered). The background color shows underneath while it loads or if removed. Tip: set the text color to contrast for legibility over a photo.
