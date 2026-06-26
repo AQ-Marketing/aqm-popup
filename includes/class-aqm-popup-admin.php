@@ -230,8 +230,7 @@ class AQM_Popup_Admin {
         add_settings_field( 'style_heading_font_family',    __( 'Headline font', 'aqm-popup' ),          array( $this, 'field_select' ), self::PAGE_SLUG, 'aqm_popup_type', array( 'key' => 'style_heading_font_family', 'options' => $heading_font_options, 'description' => __( 'Optionally give the headline its own font.', 'aqm-popup' ) ) );
         add_settings_field( 'style_heading_size',           __( 'Headline size (px)', 'aqm-popup' ),     array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_type', array( 'key' => 'style_heading_size', 'min' => 10, 'max' => 96, 'step' => 1 ) );
         add_settings_field( 'style_heading_weight',         __( 'Headline weight', 'aqm-popup' ),        array( $this, 'field_select' ), self::PAGE_SLUG, 'aqm_popup_type', array( 'key' => 'style_heading_weight', 'options' => $weight_options ) );
-        add_settings_field( 'style_heading_color_custom',   __( 'Custom headline color', 'aqm-popup' ),  array( $this, 'field_checkbox' ), self::PAGE_SLUG, 'aqm_popup_type', array( 'key' => 'style_heading_color_custom', 'description' => __( 'Off = the headline uses the popup Text color. Turn on to give the headline its own color below.', 'aqm-popup' ) ) );
-        add_settings_field( 'style_heading_color',          __( 'Headline color', 'aqm-popup' ),         array( $this, 'field_color' ),  self::PAGE_SLUG, 'aqm_popup_type', array( 'key' => 'style_heading_color', 'description' => __( 'Applies only when "Custom headline color" is on.', 'aqm-popup' ) ) );
+        add_settings_field( 'style_heading_color',          __( 'Headline color', 'aqm-popup' ),         array( $this, 'field_color' ),  self::PAGE_SLUG, 'aqm_popup_type', array( 'key' => 'style_heading_color', 'description' => __( 'Color of the headline. (The paragraph text uses the popup Text color in Popup style.)', 'aqm-popup' ) ) );
         add_settings_field( 'style_heading_line_height',    __( 'Headline line height', 'aqm-popup' ),   array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_type', array( 'key' => 'style_heading_line_height', 'min' => '0.8', 'max' => '3', 'step' => '0.05', 'description' => __( 'Space between lines, as a multiple of the font size (e.g. 1.2).', 'aqm-popup' ) ) );
         add_settings_field( 'style_heading_letter_spacing', __( 'Headline letter spacing (px)', 'aqm-popup' ), array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_type', array( 'key' => 'style_heading_letter_spacing', 'min' => -5, 'max' => 20, 'step' => '0.5', 'description' => __( 'Space between letters. Can be negative to tighten.', 'aqm-popup' ) ) );
         add_settings_field( 'style_heading_transform',      __( 'Headline letter case', 'aqm-popup' ),   array( $this, 'field_select' ), self::PAGE_SLUG, 'aqm_popup_type', array( 'key' => 'style_heading_transform', 'options' => $transform_options ) );
@@ -261,8 +260,17 @@ class AQM_Popup_Admin {
         add_settings_field( 'overlay_opacity',        __( 'Overlay opacity',        'aqm-popup' ), array( $this, 'field_number' ),   self::PAGE_SLUG, 'aqm_popup_behavior', array( 'key' => 'overlay_opacity', 'min' => 0, 'max' => 1, 'step' => '0.05', 'description' => __( 'The dark backdrop behind the popup. Between 0 (transparent) and 1 (opaque black).', 'aqm-popup' ) ) );
         add_settings_field( 'overlay_padding_vertical',   __( 'Overlay padding — top/bottom (px)',   'aqm-popup' ), array( $this, 'field_number' ),   self::PAGE_SLUG, 'aqm_popup_behavior', array( 'key' => 'overlay_padding_vertical',   'min' => 0, 'step' => 1, 'description' => __( 'Inset the popup vertically from the viewport edges. The dark backdrop fills the padded area.', 'aqm-popup' ) ) );
         add_settings_field( 'overlay_padding_horizontal', __( 'Overlay padding — left/right (px)',   'aqm-popup' ), array( $this, 'field_number' ),   self::PAGE_SLUG, 'aqm_popup_behavior', array( 'key' => 'overlay_padding_horizontal', 'min' => 0, 'step' => 1, 'description' => __( 'Inset the popup horizontally from the viewport edges. The dark backdrop fills the padded area.', 'aqm-popup' ) ) );
-        add_settings_field( 'popup_border',           __( 'Popup border',              'aqm-popup' ), array( $this, 'field_text' ),   self::PAGE_SLUG, 'aqm_popup_behavior', array( 'key' => 'popup_border',          'placeholder' => 'e.g. 5px solid #ffffff', 'description' => __( 'Optional CSS <code>border</code> shorthand applied around the whole popup. Examples: <code>5px solid #ffffff</code>, <code>2px dashed #c10f30</code>. Leave empty for no border.', 'aqm-popup' ) ) );
-        add_settings_field( 'popup_border_radius_px', __( 'Popup border radius (px)', 'aqm-popup' ), array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_behavior', array( 'key' => 'popup_border_radius_px', 'min' => 0, 'max' => 200, 'step' => 1, 'description' => __( 'Rounded corners on the popup (and the border, if set above).', 'aqm-popup' ) ) );
+        $border_style_options = array(
+            'solid'  => __( 'Solid', 'aqm-popup' ),
+            'dashed' => __( 'Dashed', 'aqm-popup' ),
+            'dotted' => __( 'Dotted', 'aqm-popup' ),
+            'double' => __( 'Double', 'aqm-popup' ),
+        );
+        add_settings_field( 'style_border_width', __( 'Border width (px)', 'aqm-popup' ),  array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_behavior', array( 'key' => 'style_border_width', 'min' => 0, 'max' => 40, 'step' => 1, 'description' => __( 'A border around the whole popup. 0 = no border.', 'aqm-popup' ) ) );
+        add_settings_field( 'style_border_style', __( 'Border style', 'aqm-popup' ),       array( $this, 'field_select' ), self::PAGE_SLUG, 'aqm_popup_behavior', array( 'key' => 'style_border_style', 'options' => $border_style_options ) );
+        add_settings_field( 'style_border_color', __( 'Border color', 'aqm-popup' ),       array( $this, 'field_color' ),  self::PAGE_SLUG, 'aqm_popup_behavior', array( 'key' => 'style_border_color' ) );
+        add_settings_field( 'popup_border_radius_px', __( 'Border radius (px)', 'aqm-popup' ), array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_behavior', array( 'key' => 'popup_border_radius_px', 'min' => 0, 'max' => 200, 'step' => 1, 'description' => __( 'Rounded corners on the popup (and the border, if set above).', 'aqm-popup' ) ) );
+        add_settings_field( 'popup_border',           __( 'Border (advanced CSS)',     'aqm-popup' ), array( $this, 'field_text' ),   self::PAGE_SLUG, 'aqm_popup_behavior', array( 'key' => 'popup_border',          'placeholder' => 'e.g. 5px solid #ffffff', 'description' => __( 'Optional. Leave empty to use the Border width/style/color above. If set, this CSS <code>border</code> shorthand overrides them — e.g. <code>5px solid #ffffff</code> or <code>2px dashed rgba(0,0,0,0.4)</code>.', 'aqm-popup' ) ) );
 
         // ---- Close icon ----
         add_settings_section( 'aqm_popup_close_icon', __( 'Close icon', 'aqm-popup' ), array( $this, 'section_close_icon_text' ), self::PAGE_SLUG );
@@ -622,7 +630,6 @@ class AQM_Popup_Admin {
         // Headline-specific typography.
         $hff = isset( $in['style_heading_font_family'] ) ? (string) $in['style_heading_font_family'] : '';
         $out['style_heading_font_family']    = isset( $fonts[ $hff ] ) ? $hff : '';
-        $out['style_heading_color_custom']   = ! empty( $in['style_heading_color_custom'] );
         $out['style_heading_color']          = $this->sanitize_hex( isset( $in['style_heading_color'] ) ? $in['style_heading_color'] : '', $defaults['style_heading_color'] );
         $out['style_heading_line_height']    = isset( $in['style_heading_line_height'] ) ? (float) min( 3, max( 0.8, (float) $in['style_heading_line_height'] ) ) : $defaults['style_heading_line_height'];
         $out['style_heading_letter_spacing'] = isset( $in['style_heading_letter_spacing'] ) ? (float) min( 20, max( -5, (float) $in['style_heading_letter_spacing'] ) ) : $defaults['style_heading_letter_spacing'];
@@ -650,6 +657,9 @@ class AQM_Popup_Admin {
         $out['overlay_opacity']            = isset( $in['overlay_opacity'] ) ? min( 1, max( 0, (float) $in['overlay_opacity'] ) ) : $defaults['overlay_opacity'];
         $out['overlay_padding_vertical']   = isset( $in['overlay_padding_vertical'] ) ? max( 0, (int) $in['overlay_padding_vertical'] ) : 0;
         $out['overlay_padding_horizontal'] = isset( $in['overlay_padding_horizontal'] ) ? max( 0, (int) $in['overlay_padding_horizontal'] ) : 0;
+        $out['style_border_width']         = isset( $in['style_border_width'] ) ? min( 40, max( 0, (int) $in['style_border_width'] ) ) : $defaults['style_border_width'];
+        $out['style_border_style']         = $this->sanitize_choice( isset( $in['style_border_style'] ) ? $in['style_border_style'] : '', array( 'solid', 'dashed', 'dotted', 'double' ), 'solid' );
+        $out['style_border_color']         = $this->sanitize_hex( isset( $in['style_border_color'] ) ? $in['style_border_color'] : '', $defaults['style_border_color'] );
         $out['popup_border']               = $this->sanitize_css_value( isset( $in['popup_border'] ) ? $in['popup_border'] : '' );
         $out['popup_border_radius_px']     = isset( $in['popup_border_radius_px'] ) ? min( 200, max( 0, (int) $in['popup_border_radius_px'] ) ) : 0;
 

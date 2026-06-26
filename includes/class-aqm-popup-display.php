@@ -182,8 +182,21 @@ class AQM_Popup_Display {
         $close_color   = (string) $design['close_icon_color'];
         $close_radius  = max( 0, min( 100, (int) $design['close_border_radius_px'] ) );
         $close_icon_sz = (int) round( $close_size * 0.5 );
-        $popup_border  = (string) $design['popup_border'];
         $popup_radius  = max( 0, min( 200, (int) $design['popup_border_radius_px'] ) );
+
+        // Border: structured width/style/color, or the legacy/advanced CSS
+        // override if set.
+        $b_width  = max( 0, min( 40, (int) $design['style_border_width'] ) );
+        $b_style  = $this->one_of( $design['style_border_style'], array( 'solid', 'dashed', 'dotted', 'double' ), 'solid' );
+        $b_color  = $this->safe_hex( $design['style_border_color'], '#ffffff' );
+        $legacy_border = (string) $design['popup_border'];
+        if ( '' !== $legacy_border ) {
+            $popup_border = $legacy_border;
+        } elseif ( $b_width > 0 ) {
+            $popup_border = $b_width . 'px ' . $b_style . ' ' . $b_color;
+        } else {
+            $popup_border = '';
+        }
 
         // Body styling.
         $body_bg     = $this->safe_hex( $design['style_bg_color'], '#ffffff' );
@@ -203,7 +216,6 @@ class AQM_Popup_Display {
 
         // Headline-specific typography.
         $h_font        = aqm_popup_font_stack( isset( $design['style_heading_font_family'] ) ? $design['style_heading_font_family'] : '' );
-        $h_color_on    = ! empty( $design['style_heading_color_custom'] );
         $h_color       = $this->safe_hex( $design['style_heading_color'], '#1d2327' );
         $h_lh          = min( 3, max( 0.8, (float) $design['style_heading_line_height'] ) );
         $h_ls          = min( 20, max( -5, (float) $design['style_heading_letter_spacing'] ) );
@@ -267,9 +279,7 @@ class AQM_Popup_Display {
         if ( '' !== $h_font ) {
             $heading_decls .= ';font-family:' . $h_font;
         }
-        if ( $h_color_on ) {
-            $heading_decls .= ';color:' . $h_color;
-        }
+        $heading_decls .= ';color:' . $h_color;
         if ( 'none' !== $h_transform ) {
             $heading_decls .= ';text-transform:' . $h_transform;
         }

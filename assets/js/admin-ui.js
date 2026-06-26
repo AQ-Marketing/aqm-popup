@@ -283,9 +283,19 @@
             var padH = Math.max(0, num('overlay_padding_horizontal', 0));
             overlay.style.padding = Math.min(46, padV * 0.18) + 'px ' + Math.min(46, padH * 0.18) + 'px';
 
-            var border = str('popup_border', '');
+            // Border: structured width/style/color, or the legacy CSS override.
+            var legacyBorder = str('popup_border', '');
+            var bWidth = clamp(num('style_border_width', 0), 0, 40);
+            var border;
+            if (legacyBorder) {
+                border = legacyBorder;
+            } else if (bWidth > 0) {
+                border = bWidth + 'px ' + str('style_border_style', 'solid') + ' ' + str('style_border_color', '#ffffff');
+            } else {
+                border = 'none';
+            }
             var radius = Math.max(0, num('popup_border_radius_px', 0));
-            popup.style.border = border ? border : 'none';
+            popup.style.border = border;
             popup.style.borderRadius = (radius * 0.32) + 'px';
             // Keep the popup itself unclipped so a negative-offset close button
             // can sit outside; clip the image on the inner content wrapper.
@@ -355,9 +365,8 @@
                 ensureFont(hFontKey);
                 pvHeading.style.fontFamily = hFontKey ? (FONTS[hFontKey] || '') : '';
 
-                // Custom color (else inherit the popup text color).
-                var hColorEl = field('style_heading_color_custom');
-                pvHeading.style.color = (hColorEl && hColorEl.checked) ? str('style_heading_color', '#1d2327') : '';
+                // Headline color (applies directly).
+                pvHeading.style.color = str('style_heading_color', '#1d2327');
 
                 pvHeading.style.lineHeight = String(clamp(num('style_heading_line_height', 1.2), 0.8, 3));
                 pvHeading.style.letterSpacing = (clamp(num('style_heading_letter_spacing', 0), -5, 20) * 0.5) + 'px';

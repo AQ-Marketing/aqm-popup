@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.4 — 2026-06-26
+
+- **Headline color now applies directly.** Previously it only took effect if you also turned on a separate "Custom headline color" checkbox, so setting just the color appeared to do nothing. That toggle is gone — the Headline color picker works on its own, on the front end and in the live preview. Existing designs are migrated so their headline keeps its current color (e.g. a white headline on a photo stays white).
+- **Real border controls with a color picker.** The single free-text "Popup border" field (where entering just a color produced invalid CSS) is replaced by **Border width**, **Border style** (solid/dashed/dotted/double), and a **Border color** picker. The old free-text field remains as an optional "Border (advanced CSS)" override for existing designs and power users.
+- Both update live in the settings preview.
+
 ## 1.2.3 — 2026-06-26
 
 - **Headline font now previews in real time.** Changing the headline (or base) font in the editor immediately updates the live preview — the chosen Google Font is now loaded into the settings page on the fly instead of only after saving and reloading. The other headline controls (size, weight, color, line height, letter spacing, letter case, italic, alignment, spacing) already updated live.

@@ -3,7 +3,7 @@
 Plugin Name: AQM Popup
 Plugin URI: https://aqmarketing.com/
 Description: Site-wide popup builder. Compose the popup (image, headline, text, button) right in the settings, with configurable triggers (time delay, scroll depth, exit intent, click on element), per-session show cap, and post-dismissal cooldown.
-Version: 1.2.3
+Version: 1.2.4
 Author: AQ Marketing
 Author URI: https://aqmarketing.com/
 GitHub Plugin URI: https://github.com/AQ-Marketing/aqm-popup
@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'AQM_POPUP_VERSION', '1.2.3' );
+define( 'AQM_POPUP_VERSION', '1.2.4' );
 define( 'AQM_POPUP_FILE', __FILE__ );
 define( 'AQM_POPUP_PATH', plugin_dir_path( __FILE__ ) );
 define( 'AQM_POPUP_URL', plugin_dir_url( __FILE__ ) );
@@ -74,7 +74,6 @@ function aqm_popup_design_defaults() {
         // Headline typography (each defaults to "inherit current behavior" so
         // existing designs are unchanged).
         'style_heading_font_family'    => '',      // '' = same as popup font
-        'style_heading_color_custom'   => false,   // false = inherit text color
         'style_heading_color'          => '#1d2327',
         'style_heading_line_height'    => 1.2,
         'style_heading_letter_spacing' => 0,
@@ -104,7 +103,10 @@ function aqm_popup_design_defaults() {
         'overlay_opacity'         => 0.7,
         'overlay_padding_vertical'   => 0,
         'overlay_padding_horizontal' => 0,
-        'popup_border'            => '',
+        'style_border_width'      => 0,          // 0 = no border
+        'style_border_style'      => 'solid',
+        'style_border_color'      => '#ffffff',
+        'popup_border'            => '',         // legacy/advanced CSS override
         'popup_border_radius_px'  => 0,
 
         // Close icon.
@@ -125,7 +127,7 @@ function aqm_popup_default_settings() {
     $design        = aqm_popup_design_defaults();
     $design['name'] = __( 'Design 1', 'aqm-popup' );
     return array(
-        'schema'            => 2,
+        'schema'            => 3,
         'enabled'           => false,
         'active'            => $id,
         'order'             => array( $id ),
@@ -173,6 +175,7 @@ function aqm_popup_normalize_settings( $stored ) {
     if ( empty( $stored['schema'] ) || (int) $stored['schema'] < 2 || ! isset( $stored['designs'] ) ) {
         $stored = aqm_popup_migrate_v1( $stored );
     }
+    $schema_in = isset( $stored['schema'] ) ? (int) $stored['schema'] : 0;
 
     $top_defaults = array(
         'schema'            => 2,
@@ -200,6 +203,20 @@ function aqm_popup_normalize_settings( $stored ) {
         }
         $clean[ (string) $id ] = array_merge( $design_defaults, $design );
     }
+
+    // Schema 2 → 3: the headline color used to apply only when a (now-removed)
+    // "custom" toggle was on; otherwise the headline inherited the text color.
+    // Bake that into the headline color so removing the toggle doesn't change
+    // how any existing design looks.
+    if ( $schema_in < 3 ) {
+        foreach ( $clean as $id => $design ) {
+            if ( empty( $design['style_heading_color_custom'] ) && isset( $design['style_text_color'] ) ) {
+                $clean[ $id ]['style_heading_color'] = $design['style_text_color'];
+            }
+            unset( $clean[ $id ]['style_heading_color_custom'] );
+        }
+    }
+
     $s['designs'] = $clean;
 
     // Order lists exactly the existing design ids, in a stable sequence.
@@ -226,7 +243,7 @@ function aqm_popup_normalize_settings( $stored ) {
     $s['enabled']           = ! empty( $s['enabled'] );
     $s['test_mode_enabled'] = ! empty( $s['test_mode_enabled'] );
     $s['test_mode_page_id'] = (int) $s['test_mode_page_id'];
-    $s['schema']            = 2;
+    $s['schema']            = 3;
 
     return $s;
 }
