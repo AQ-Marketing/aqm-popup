@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.2 — 2026-06-26
+
+- **Fixed "have to update twice."** The self-updater compared the new version against the plugin version captured at the start of the request, which is stale right after an update swaps the files mid-request — so it re-offered the update you just installed, and only stopped on the next page load. It now compares against the version WordPress currently sees on disk (`$transient->checked`), clears any stale "update available" entry, and drops the cached GitHub tag data after an install.
+- **Note:** the jump *to* 1.2.2 is still handled by the old updater, so that one update may double one last time. From 1.2.2 onward, updates apply in a single click.
+
 ## 1.2.1 — 2026-06-26
 
 - **Full headline text styling.** The headline now has its own complete set of controls in *Typography*, on top of size and weight:

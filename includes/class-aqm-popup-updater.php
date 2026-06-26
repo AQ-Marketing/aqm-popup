@@ -47,7 +47,18 @@ class AQM_Popup_Updater {
         $update_data    = $this->get_github_update_data();
         $latest_version = $update_data ? ltrim( $update_data->tag_name, 'v' ) : '';
 
-        if ( $update_data && version_compare( $this->plugin_data['Version'], $latest_version, '<' ) ) {
+        // Compare against the version WordPress currently sees installed on disk
+        // (via $transient->checked), NOT $this->plugin_data['Version']. That
+        // property is captured in the constructor at the START of the request;
+        // after an update swaps the files mid-request it is stale, so comparing
+        // against it re-offers the update we just installed — the cause of the
+        // "have to update twice" loop. $transient->checked already reflects the
+        // freshly-installed version, so the second offer never appears.
+        $installed_version = isset( $transient->checked[ $this->plugin_basename ] )
+            ? $transient->checked[ $this->plugin_basename ]
+            : $this->plugin_data['Version'];
+
+        if ( $update_data && version_compare( $installed_version, $latest_version, '<' ) ) {
             error_log( '[AQM POPUP UPDATER] New version available: ' . $update_data->tag_name );
 
             $plugin_info              = new stdClass();
@@ -62,6 +73,10 @@ class AQM_Popup_Updater {
             }
 
             $transient->response[ $this->plugin_basename ] = $plugin_info;
+        } else {
+            // No update (or we're already current) — make sure no stale
+            // "update available" entry lingers in the transient.
+            unset( $transient->response[ $this->plugin_basename ] );
         }
 
         return $transient;
@@ -160,6 +175,10 @@ class AQM_Popup_Updater {
         if ( ! isset( $options['plugins'] ) || ! in_array( $this->plugin_basename, $options['plugins'], true ) ) {
             return;
         }
+
+        // Drop the cached GitHub tag data so the next update check fetches fresh
+        // and recomputes against the just-installed version.
+        delete_transient( 'aqm_popup_github_data_' . md5( $this->username . $this->repository ) );
 
         set_transient( 'aqm_popup_reactivate', true, 5 * MINUTE_IN_SECONDS );
 
