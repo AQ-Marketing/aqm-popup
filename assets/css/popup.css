@@ -167,17 +167,20 @@
     line-height: 1;
 }
 
-.aqm-popup-close:hover,
-.aqm-popup-close:focus {
-    background: transparent;
-    outline: none;
+.aqm-popup-close:hover {
     transform: scale(1.15);
     filter: drop-shadow(0 1px 6px rgba(0, 0, 0, 0.95));
 }
 
+/*
+ * No focus ring. The popup auto-focuses the close button on open for keyboard
+ * accessibility, which was rendering a white outline that looked like a random
+ * border appearing/disappearing. Keep the button visually unchanged on focus.
+ */
+.aqm-popup-close:focus,
 .aqm-popup-close:focus-visible {
-    outline: 2px solid #fff;
-    outline-offset: 4px;
+    outline: none;
+    box-shadow: none;
 }
 
 .aqm-popup-close-icon {
