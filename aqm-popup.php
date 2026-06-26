@@ -3,7 +3,7 @@
 Plugin Name: AQM Popup
 Plugin URI: https://aqmarketing.com/
 Description: Site-wide popup builder. Compose the popup (image, headline, text, button) right in the settings, with configurable triggers (time delay, scroll depth, exit intent, click on element), per-session show cap, and post-dismissal cooldown.
-Version: 1.2.5
+Version: 1.2.6
 Author: AQ Marketing
 Author URI: https://aqmarketing.com/
 GitHub Plugin URI: https://github.com/AQ-Marketing/aqm-popup
@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'AQM_POPUP_VERSION', '1.2.5' );
+define( 'AQM_POPUP_VERSION', '1.2.6' );
 define( 'AQM_POPUP_FILE', __FILE__ );
 define( 'AQM_POPUP_PATH', plugin_dir_path( __FILE__ ) );
 define( 'AQM_POPUP_URL', plugin_dir_url( __FILE__ ) );
@@ -101,6 +101,7 @@ function aqm_popup_design_defaults() {
         'close_on_overlay_click'  => true,
         'close_on_esc'            => true,
         'overlay_opacity'         => 0.7,
+        'style_backdrop_color'    => '#000000',
         'overlay_padding_vertical'   => 0,
         'overlay_padding_horizontal' => 0,
         'style_border_width'      => 0,          // 0 = no border

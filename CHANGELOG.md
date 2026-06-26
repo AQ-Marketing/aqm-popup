@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.6 — 2026-06-26
+
+- **Fixed: Popup box border not applying.** If the legacy "Border (advanced CSS)" field had a leftover value, it overrode the structured Border width/style/color and could render nothing. The structured border now takes precedence whenever its width is greater than 0; the advanced field is only used as a fallback when width is 0. (Reminder: a border needs a width above 0 to show.)
+- **New: Backdrop color.** You can now set the color of the dark screen behind the popup (in the Backdrop section), combined with the existing opacity — e.g. a brand color at 0.5 instead of always black. Defaults to black, so nothing changes unless you set it. Reflected live in the preview.
+
 ## 1.2.5 — 2026-06-26
 
 - **Settings reorganized by element.** Each thing's controls — including its color — now live together, instead of being scattered across "Popup style", "Typography", and "Behavior":

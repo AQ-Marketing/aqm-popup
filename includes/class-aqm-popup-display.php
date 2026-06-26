@@ -165,9 +165,10 @@ class AQM_Popup_Display {
         $opacity = min( 1, max( 0, (float) $design['overlay_opacity'] ) );
         $v       = max( 0, (int) $design['overlay_padding_vertical'] );
         $h       = max( 0, (int) $design['overlay_padding_horizontal'] );
+        $backdrop_rgb = $this->hex_to_rgb( $this->safe_hex( $design['style_backdrop_color'], '#000000' ) );
 
         $overlay_styles   = array();
-        $overlay_styles[] = sprintf( 'background-color: rgba(0,0,0,%s)', esc_attr( (string) $opacity ) );
+        $overlay_styles[] = sprintf( 'background-color: rgba(%1$s,%2$s)', $backdrop_rgb, esc_attr( (string) $opacity ) );
         if ( $v > 0 || $h > 0 ) {
             $overlay_styles[] = sprintf( 'padding: %dpx %dpx', $v, $h );
         }
@@ -189,11 +190,13 @@ class AQM_Popup_Display {
         $b_width  = max( 0, min( 40, (int) $design['style_border_width'] ) );
         $b_style  = $this->one_of( $design['style_border_style'], array( 'solid', 'dashed', 'dotted', 'double' ), 'solid' );
         $b_color  = $this->safe_hex( $design['style_border_color'], '#ffffff' );
+        // Structured border wins when its width is set; the legacy free-text
+        // field is only a fallback (so a stale value can't block the controls).
         $legacy_border = (string) $design['popup_border'];
-        if ( '' !== $legacy_border ) {
-            $popup_border = $legacy_border;
-        } elseif ( $b_width > 0 ) {
+        if ( $b_width > 0 ) {
             $popup_border = $b_width . 'px ' . $b_style . ' ' . $b_color;
+        } elseif ( '' !== $legacy_border ) {
+            $popup_border = $legacy_border;
         } else {
             $popup_border = '';
         }

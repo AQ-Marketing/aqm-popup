@@ -277,20 +277,20 @@
         function apply() {
             // ---- backdrop + container chrome ----
             var opacity = clamp(num('overlay_opacity', 0.7), 0, 1);
-            overlay.style.background = 'rgba(0,0,0,' + opacity + ')';
+            overlay.style.background = 'rgba(' + hexToRgb(str('style_backdrop_color', '#000000')) + ',' + opacity + ')';
 
             var padV = Math.max(0, num('overlay_padding_vertical', 0));
             var padH = Math.max(0, num('overlay_padding_horizontal', 0));
             overlay.style.padding = Math.min(46, padV * 0.18) + 'px ' + Math.min(46, padH * 0.18) + 'px';
 
-            // Border: structured width/style/color, or the legacy CSS override.
-            var legacyBorder = str('popup_border', '');
+            // Border: structured width/style/color wins; legacy CSS is a fallback.
             var bWidth = clamp(num('style_border_width', 0), 0, 40);
+            var legacyBorder = str('popup_border', '');
             var border;
-            if (legacyBorder) {
-                border = legacyBorder;
-            } else if (bWidth > 0) {
+            if (bWidth > 0) {
                 border = bWidth + 'px ' + str('style_border_style', 'solid') + ' ' + str('style_border_color', '#ffffff');
+            } else if (legacyBorder) {
+                border = legacyBorder;
             } else {
                 border = 'none';
             }

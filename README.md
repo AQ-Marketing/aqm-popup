@@ -55,7 +55,7 @@ Background color, **background image** (with an optional **overlay tint** for le
 
 ### Backdrop
 
-The dark screen behind the popup: its **opacity**, and the **gap** between the popup and the screen edges.
+The screen behind the popup: its **color** and **opacity** (e.g. black at 0.7, or a brand color at 0.5), and the **gap** between the popup and the screen edges.
 
 All of the above use a native color picker where relevant and update live in the preview.
 

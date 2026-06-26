@@ -240,7 +240,8 @@ class AQM_Popup_Admin {
 
         // ---- Backdrop (the dark area behind the popup) ----
         add_settings_section( 'aqm_popup_backdrop', __( 'Backdrop', 'aqm-popup' ), array( $this, 'section_backdrop_text' ), self::PAGE_SLUG );
-        add_settings_field( 'overlay_opacity',            __( 'Backdrop opacity',          'aqm-popup' ), array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_backdrop', array( 'key' => 'overlay_opacity', 'min' => 0, 'max' => 1, 'step' => '0.05', 'description' => __( 'The dark screen behind the popup. 0 (transparent) to 1 (opaque black).', 'aqm-popup' ) ) );
+        add_settings_field( 'style_backdrop_color',       __( 'Backdrop color',            'aqm-popup' ), array( $this, 'field_color' ),  self::PAGE_SLUG, 'aqm_popup_backdrop', array( 'key' => 'style_backdrop_color', 'description' => __( 'The screen behind the popup. Combined with the opacity below (e.g. black at 0.7, or a brand color at 0.5).', 'aqm-popup' ) ) );
+        add_settings_field( 'overlay_opacity',            __( 'Backdrop opacity',          'aqm-popup' ), array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_backdrop', array( 'key' => 'overlay_opacity', 'min' => 0, 'max' => 1, 'step' => '0.05', 'description' => __( 'How opaque the backdrop is. 0 (transparent) to 1 (solid).', 'aqm-popup' ) ) );
         add_settings_field( 'overlay_padding_vertical',   __( 'Edge gap — top/bottom (px)', 'aqm-popup' ), array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_backdrop', array( 'key' => 'overlay_padding_vertical',   'min' => 0, 'step' => 1, 'description' => __( 'Inset the popup from the top/bottom of the screen. The backdrop fills the gap.', 'aqm-popup' ) ) );
         add_settings_field( 'overlay_padding_horizontal', __( 'Edge gap — left/right (px)', 'aqm-popup' ), array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_backdrop', array( 'key' => 'overlay_padding_horizontal', 'min' => 0, 'step' => 1, 'description' => __( 'Inset the popup from the left/right of the screen.', 'aqm-popup' ) ) );
 
@@ -653,6 +654,7 @@ class AQM_Popup_Admin {
         $out['close_on_overlay_click']     = ! empty( $in['close_on_overlay_click'] );
         $out['close_on_esc']               = ! empty( $in['close_on_esc'] );
         $out['overlay_opacity']            = isset( $in['overlay_opacity'] ) ? min( 1, max( 0, (float) $in['overlay_opacity'] ) ) : $defaults['overlay_opacity'];
+        $out['style_backdrop_color']       = $this->sanitize_hex( isset( $in['style_backdrop_color'] ) ? $in['style_backdrop_color'] : '', $defaults['style_backdrop_color'] );
         $out['overlay_padding_vertical']   = isset( $in['overlay_padding_vertical'] ) ? max( 0, (int) $in['overlay_padding_vertical'] ) : 0;
         $out['overlay_padding_horizontal'] = isset( $in['overlay_padding_horizontal'] ) ? max( 0, (int) $in['overlay_padding_horizontal'] ) : 0;
         $out['style_border_width']         = isset( $in['style_border_width'] ) ? min( 40, max( 0, (int) $in['style_border_width'] ) ) : $defaults['style_border_width'];
