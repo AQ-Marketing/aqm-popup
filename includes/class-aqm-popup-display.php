@@ -118,10 +118,14 @@ class AQM_Popup_Display {
 
         wp_enqueue_style( 'aqm-popup', AQM_POPUP_URL . 'assets/css/popup.css', array(), AQM_POPUP_VERSION );
 
-        // Google Font for this design (if any).
+        // Google Font(s) for this design (base + optional headline override).
         $font_url = aqm_popup_google_font_url( isset( $design['style_font_family'] ) ? $design['style_font_family'] : '' );
         if ( $font_url ) {
             wp_enqueue_style( 'aqm-popup-font', $font_url, array(), null ); // phpcs:ignore WordPress.WP.EnqueuedResourceParameters.MissingVersion -- Google Fonts URL is versionless.
+        }
+        $h_font_url = aqm_popup_google_font_url( isset( $design['style_heading_font_family'] ) ? $design['style_heading_font_family'] : '' );
+        if ( $h_font_url && $h_font_url !== $font_url ) {
+            wp_enqueue_style( 'aqm-popup-font-heading', $h_font_url, array(), null ); // phpcs:ignore WordPress.WP.EnqueuedResourceParameters.MissingVersion -- Google Fonts URL is versionless.
         }
 
         wp_enqueue_script( 'aqm-popup', AQM_POPUP_URL . 'assets/js/popup.js', array(), AQM_POPUP_VERSION, true );
@@ -197,6 +201,17 @@ class AQM_Popup_Display {
         $b_size      = max( 10, min( 48, (int) $design['style_body_size'] ) );
         $b_weight    = (int) $design['style_body_weight'];
 
+        // Headline-specific typography.
+        $h_font        = aqm_popup_font_stack( isset( $design['style_heading_font_family'] ) ? $design['style_heading_font_family'] : '' );
+        $h_color_on    = ! empty( $design['style_heading_color_custom'] );
+        $h_color       = $this->safe_hex( $design['style_heading_color'], '#1d2327' );
+        $h_lh          = min( 3, max( 0.8, (float) $design['style_heading_line_height'] ) );
+        $h_ls          = min( 20, max( -5, (float) $design['style_heading_letter_spacing'] ) );
+        $h_transform   = $this->one_of( $design['style_heading_transform'], array( 'none', 'uppercase', 'lowercase', 'capitalize' ), 'none' );
+        $h_italic      = ! empty( $design['style_heading_italic'] );
+        $h_align       = $this->one_of( $design['style_heading_align'], array( 'inherit', 'left', 'center', 'right' ), 'inherit' );
+        $h_mb          = max( 0, min( 80, (int) $design['style_heading_margin_bottom'] ) );
+
         // Background image + optional overlay tint.
         $bg_image_id  = (int) $design['style_bg_image_id'];
         $bg_image_url = $bg_image_id > 0 ? wp_get_attachment_image_url( $bg_image_id, 'large' ) : '';
@@ -246,7 +261,25 @@ class AQM_Popup_Display {
         }
         $inline_rules[] = sprintf( '#aqm-popup-content .aqm-popup-built{%s}', $built_decls );
         $inline_rules[] = sprintf( '#aqm-popup-content .aqm-popup-built__body{padding:%dpx}', $padding );
-        $inline_rules[] = sprintf( '#aqm-popup-content .aqm-popup-built__heading{font-size:%1$dpx;font-weight:%2$d}', $h_size, $h_weight );
+        $lh_str        = rtrim( rtrim( number_format( $h_lh, 2, '.', '' ), '0' ), '.' );
+        $ls_str        = rtrim( rtrim( number_format( $h_ls, 2, '.', '' ), '0' ), '.' );
+        $heading_decls = sprintf( 'font-size:%1$dpx;font-weight:%2$d;line-height:%3$s;letter-spacing:%4$spx;margin-bottom:%5$dpx', $h_size, $h_weight, $lh_str, $ls_str, $h_mb );
+        if ( '' !== $h_font ) {
+            $heading_decls .= ';font-family:' . $h_font;
+        }
+        if ( $h_color_on ) {
+            $heading_decls .= ';color:' . $h_color;
+        }
+        if ( 'none' !== $h_transform ) {
+            $heading_decls .= ';text-transform:' . $h_transform;
+        }
+        if ( $h_italic ) {
+            $heading_decls .= ';font-style:italic';
+        }
+        if ( 'inherit' !== $h_align ) {
+            $heading_decls .= ';text-align:' . $h_align;
+        }
+        $inline_rules[] = sprintf( '#aqm-popup-content .aqm-popup-built__heading{%s}', $heading_decls );
         $inline_rules[] = sprintf( '#aqm-popup-content .aqm-popup-built__text{font-size:%1$dpx;font-weight:%2$d}', $b_size, $b_weight );
         $inline_rules[] = sprintf( '#aqm-popup-content .aqm-popup-built__btn{background:%1$s;color:%2$s}', $btn_bg, $btn_text );
 

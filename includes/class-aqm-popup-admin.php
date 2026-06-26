@@ -93,11 +93,15 @@ class AQM_Popup_Admin {
             AQM_POPUP_VERSION
         );
 
-        // Google Font for the design being edited, so the preview is accurate.
+        // Google Font(s) for the design being edited, so the preview is accurate.
         $editing  = $this->editing();
         $font_url = aqm_popup_google_font_url( isset( $editing['style_font_family'] ) ? $editing['style_font_family'] : '' );
         if ( $font_url ) {
             wp_enqueue_style( 'aqm-popup-admin-font', $font_url, array(), null ); // phpcs:ignore WordPress.WP.EnqueuedResourceParameters.MissingVersion -- Google Fonts URL is versionless.
+        }
+        $h_font_url = aqm_popup_google_font_url( isset( $editing['style_heading_font_family'] ) ? $editing['style_heading_font_family'] : '' );
+        if ( $h_font_url && $h_font_url !== $font_url ) {
+            wp_enqueue_style( 'aqm-popup-admin-font-heading', $h_font_url, array(), null ); // phpcs:ignore WordPress.WP.EnqueuedResourceParameters.MissingVersion -- Google Fonts URL is versionless.
         }
 
         wp_enqueue_script( 'aqm-popup-gsap', 'https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js', array(), '3.12.5', true );
@@ -195,9 +199,42 @@ class AQM_Popup_Admin {
             $font_options[ $k ] = $f['label'];
         }
         $weight_options = array( '400' => __( 'Normal (400)', 'aqm-popup' ), '500' => __( 'Medium (500)', 'aqm-popup' ), '600' => __( 'Semibold (600)', 'aqm-popup' ), '700' => __( 'Bold (700)', 'aqm-popup' ), '800' => __( 'Extrabold (800)', 'aqm-popup' ) );
-        add_settings_field( 'style_font_family',   __( 'Font', 'aqm-popup' ),          array( $this, 'field_select' ), self::PAGE_SLUG, 'aqm_popup_type', array( 'key' => 'style_font_family', 'options' => $font_options, 'description' => __( 'Google Fonts load automatically on the front end. "Theme default" uses your site\'s existing font (no extra request).', 'aqm-popup' ) ) );
-        add_settings_field( 'style_heading_size',  __( 'Headline size (px)', 'aqm-popup' ),  array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_type', array( 'key' => 'style_heading_size', 'min' => 10, 'max' => 96, 'step' => 1 ) );
-        add_settings_field( 'style_heading_weight',__( 'Headline weight', 'aqm-popup' ),      array( $this, 'field_select' ), self::PAGE_SLUG, 'aqm_popup_type', array( 'key' => 'style_heading_weight', 'options' => $weight_options ) );
+        add_settings_field( 'style_font_family',   __( 'Base font', 'aqm-popup' ),     array( $this, 'field_select' ), self::PAGE_SLUG, 'aqm_popup_type', array( 'key' => 'style_font_family', 'options' => $font_options, 'description' => __( 'Used for the whole popup. Google Fonts load automatically on the front end. "Theme default" uses your site\'s existing font (no extra request). The headline can override this below.', 'aqm-popup' ) ) );
+
+        // Headline-specific typography. "Same as popup font" / "inherit" defaults
+        // keep existing designs looking exactly as they did.
+        $heading_font_options = array( '' => __( 'Same as base font', 'aqm-popup' ) );
+        foreach ( aqm_popup_fonts() as $k => $f ) {
+            if ( '' === $k ) {
+                continue;
+            }
+            $heading_font_options[ $k ] = $f['label'];
+        }
+        $transform_options = array(
+            'none'       => __( 'Normal', 'aqm-popup' ),
+            'uppercase'  => __( 'UPPERCASE', 'aqm-popup' ),
+            'lowercase'  => __( 'lowercase', 'aqm-popup' ),
+            'capitalize' => __( 'Capitalize Each Word', 'aqm-popup' ),
+        );
+        $heading_align_options = array(
+            'inherit' => __( 'Same as popup', 'aqm-popup' ),
+            'left'    => __( 'Left', 'aqm-popup' ),
+            'center'  => __( 'Center', 'aqm-popup' ),
+            'right'   => __( 'Right', 'aqm-popup' ),
+        );
+
+        add_settings_field( 'style_heading_font_family',    __( 'Headline font', 'aqm-popup' ),          array( $this, 'field_select' ), self::PAGE_SLUG, 'aqm_popup_type', array( 'key' => 'style_heading_font_family', 'options' => $heading_font_options, 'description' => __( 'Optionally give the headline its own font.', 'aqm-popup' ) ) );
+        add_settings_field( 'style_heading_size',           __( 'Headline size (px)', 'aqm-popup' ),     array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_type', array( 'key' => 'style_heading_size', 'min' => 10, 'max' => 96, 'step' => 1 ) );
+        add_settings_field( 'style_heading_weight',         __( 'Headline weight', 'aqm-popup' ),        array( $this, 'field_select' ), self::PAGE_SLUG, 'aqm_popup_type', array( 'key' => 'style_heading_weight', 'options' => $weight_options ) );
+        add_settings_field( 'style_heading_color_custom',   __( 'Custom headline color', 'aqm-popup' ),  array( $this, 'field_checkbox' ), self::PAGE_SLUG, 'aqm_popup_type', array( 'key' => 'style_heading_color_custom', 'description' => __( 'Off = the headline uses the popup Text color. Turn on to give the headline its own color below.', 'aqm-popup' ) ) );
+        add_settings_field( 'style_heading_color',          __( 'Headline color', 'aqm-popup' ),         array( $this, 'field_color' ),  self::PAGE_SLUG, 'aqm_popup_type', array( 'key' => 'style_heading_color', 'description' => __( 'Applies only when "Custom headline color" is on.', 'aqm-popup' ) ) );
+        add_settings_field( 'style_heading_line_height',    __( 'Headline line height', 'aqm-popup' ),   array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_type', array( 'key' => 'style_heading_line_height', 'min' => '0.8', 'max' => '3', 'step' => '0.05', 'description' => __( 'Space between lines, as a multiple of the font size (e.g. 1.2).', 'aqm-popup' ) ) );
+        add_settings_field( 'style_heading_letter_spacing', __( 'Headline letter spacing (px)', 'aqm-popup' ), array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_type', array( 'key' => 'style_heading_letter_spacing', 'min' => -5, 'max' => 20, 'step' => '0.5', 'description' => __( 'Space between letters. Can be negative to tighten.', 'aqm-popup' ) ) );
+        add_settings_field( 'style_heading_transform',      __( 'Headline letter case', 'aqm-popup' ),   array( $this, 'field_select' ), self::PAGE_SLUG, 'aqm_popup_type', array( 'key' => 'style_heading_transform', 'options' => $transform_options ) );
+        add_settings_field( 'style_heading_italic',         __( 'Headline italic', 'aqm-popup' ),        array( $this, 'field_checkbox' ), self::PAGE_SLUG, 'aqm_popup_type', array( 'key' => 'style_heading_italic' ) );
+        add_settings_field( 'style_heading_align',          __( 'Headline alignment', 'aqm-popup' ),     array( $this, 'field_select' ), self::PAGE_SLUG, 'aqm_popup_type', array( 'key' => 'style_heading_align', 'options' => $heading_align_options ) );
+        add_settings_field( 'style_heading_margin_bottom',  __( 'Space below headline (px)', 'aqm-popup' ), array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_type', array( 'key' => 'style_heading_margin_bottom', 'min' => 0, 'max' => 80, 'step' => 1 ) );
+
         add_settings_field( 'style_body_size',     __( 'Text size (px)', 'aqm-popup' ),       array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_type', array( 'key' => 'style_body_size', 'min' => 10, 'max' => 48, 'step' => 1 ) );
         add_settings_field( 'style_body_weight',   __( 'Text weight', 'aqm-popup' ),          array( $this, 'field_select' ), self::PAGE_SLUG, 'aqm_popup_type', array( 'key' => 'style_body_weight', 'options' => $weight_options ) );
 
@@ -577,6 +614,18 @@ class AQM_Popup_Admin {
         $weights                   = array( 400, 500, 600, 700, 800 );
         $out['style_heading_weight'] = ( isset( $in['style_heading_weight'] ) && in_array( (int) $in['style_heading_weight'], $weights, true ) ) ? (int) $in['style_heading_weight'] : 700;
         $out['style_body_weight']    = ( isset( $in['style_body_weight'] ) && in_array( (int) $in['style_body_weight'], $weights, true ) ) ? (int) $in['style_body_weight'] : 400;
+
+        // Headline-specific typography.
+        $hff = isset( $in['style_heading_font_family'] ) ? (string) $in['style_heading_font_family'] : '';
+        $out['style_heading_font_family']    = isset( $fonts[ $hff ] ) ? $hff : '';
+        $out['style_heading_color_custom']   = ! empty( $in['style_heading_color_custom'] );
+        $out['style_heading_color']          = $this->sanitize_hex( isset( $in['style_heading_color'] ) ? $in['style_heading_color'] : '', $defaults['style_heading_color'] );
+        $out['style_heading_line_height']    = isset( $in['style_heading_line_height'] ) ? (float) min( 3, max( 0.8, (float) $in['style_heading_line_height'] ) ) : $defaults['style_heading_line_height'];
+        $out['style_heading_letter_spacing'] = isset( $in['style_heading_letter_spacing'] ) ? (float) min( 20, max( -5, (float) $in['style_heading_letter_spacing'] ) ) : $defaults['style_heading_letter_spacing'];
+        $out['style_heading_transform']      = $this->sanitize_choice( isset( $in['style_heading_transform'] ) ? $in['style_heading_transform'] : '', array( 'none', 'uppercase', 'lowercase', 'capitalize' ), 'none' );
+        $out['style_heading_italic']         = ! empty( $in['style_heading_italic'] );
+        $out['style_heading_align']          = $this->sanitize_choice( isset( $in['style_heading_align'] ) ? $in['style_heading_align'] : '', array( 'inherit', 'left', 'center', 'right' ), 'inherit' );
+        $out['style_heading_margin_bottom']  = isset( $in['style_heading_margin_bottom'] ) ? min( 80, max( 0, (int) $in['style_heading_margin_bottom'] ) ) : $defaults['style_heading_margin_bottom'];
 
         // Triggers.
         $out['trigger_delay_enabled']  = ! empty( $in['trigger_delay_enabled'] );

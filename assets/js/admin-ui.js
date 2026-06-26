@@ -332,6 +332,28 @@
                 pvHeading.hidden = heading === '';
                 pvHeading.style.fontSize = Math.max(11, clamp(num('style_heading_size', 28), 10, 96) * 0.5) + 'px';
                 pvHeading.style.fontWeight = String(num('style_heading_weight', 700));
+
+                // Headline font: override or inherit the base popup font.
+                var hFontKey = str('style_heading_font_family', '');
+                pvHeading.style.fontFamily = hFontKey ? (FONTS[hFontKey] || '') : '';
+
+                // Custom color (else inherit the popup text color).
+                var hColorEl = field('style_heading_color_custom');
+                pvHeading.style.color = (hColorEl && hColorEl.checked) ? str('style_heading_color', '#1d2327') : '';
+
+                pvHeading.style.lineHeight = String(clamp(num('style_heading_line_height', 1.2), 0.8, 3));
+                pvHeading.style.letterSpacing = (clamp(num('style_heading_letter_spacing', 0), -5, 20) * 0.5) + 'px';
+
+                var ht = str('style_heading_transform', 'none');
+                pvHeading.style.textTransform = (ht === 'none') ? '' : ht;
+
+                var hItalicEl = field('style_heading_italic');
+                pvHeading.style.fontStyle = (hItalicEl && hItalicEl.checked) ? 'italic' : '';
+
+                var ha = str('style_heading_align', 'inherit');
+                pvHeading.style.textAlign = (ha === 'inherit') ? '' : ha;
+
+                pvHeading.style.marginBottom = (clamp(num('style_heading_margin_bottom', 10), 0, 80) * 0.5) + 'px';
             }
             if (pvText) {
                 var body = str('content_body', '');

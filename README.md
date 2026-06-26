@@ -45,7 +45,7 @@ Background color, **background image** (with an optional **overlay tint** for le
 
 ### Typography
 
-Choose a **font** — Theme default (your site's font, no extra request) or a Google Font (Inter, Poppins, Montserrat, Roboto, Lato, Open Sans, Playfair Display, Merriweather) — and set the **headline and text size + weight**. Google Fonts load automatically on the front end.
+Choose a **base font** — Theme default (your site's font, no extra request) or a Google Font (Inter, Poppins, Montserrat, Roboto, Lato, Open Sans, Playfair Display, Merriweather). Set the **text size + weight**, and the headline has a full set of its own controls: **font** (override the base), **size**, **weight**, optional **custom color**, **line height**, **letter spacing**, **letter case** (uppercase / lowercase / capitalize), **italic**, **alignment**, and **space below**. Google Fonts load automatically on the front end.
 
 ### Triggers
 

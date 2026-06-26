@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.1 — 2026-06-26
+
+- **Full headline text styling.** The headline now has its own complete set of controls in *Typography*, on top of size and weight:
+  - **Headline font** (override the base popup font, or keep "Same as base font").
+  - **Custom headline color** (toggle) + color — off by default, so the headline keeps using the popup Text color unless you opt in.
+  - **Line height**, **letter spacing** (can be negative), **letter case** (UPPERCASE / lowercase / Capitalize), **italic**, **alignment** (own or same as popup), and **space below**.
+- Every new control defaults to "inherit current behavior," so existing designs render exactly as before. Headline Google Fonts are auto-enqueued; all values are validated/clamped. Reflected live in the preview.
+
 ## 1.2.0 — 2026-06-25
 
 - **Designs library.** Save multiple popup designs and keep them in one place. Each design is a full preset — its own content, style, typography, triggers, frequency, behavior, and close-icon. **Activate** any design at any time, **Archive** the ones you are not using, **Duplicate** to spin up a variant, and **Add** new designs. One design is "active" (live); the rest are saved aside.
