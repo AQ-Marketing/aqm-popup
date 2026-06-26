@@ -24,6 +24,21 @@
         replay:       UI.replay       || 'Replay'
     };
     var FONTS = (window.aqmPopupUi && window.aqmPopupUi.fonts) || {};
+    var FONT_URLS = (window.aqmPopupUi && window.aqmPopupUi.fontUrls) || {};
+
+    // Lazy-load a Google Font into the admin page the first time it's picked, so
+    // the live preview reflects font changes immediately (no save/reload needed).
+    var _loadedFonts = {};
+    function ensureFont(key) {
+        if (!key || _loadedFonts[key]) { return; }
+        var url = FONT_URLS[key];
+        if (!url) { return; }
+        _loadedFonts[key] = true;
+        var link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = url;
+        document.head.appendChild(link);
+    }
 
     function hasGSAP()    { return typeof window.gsap !== 'undefined'; }
     function reduceMotion() {
@@ -287,7 +302,9 @@
             popup.style.textAlign = (al === 'left' || al === 'right') ? al : 'center';
 
             // Font family (from the localized registry; '' = theme default).
-            popup.style.fontFamily = FONTS[str('style_font_family', '')] || '';
+            var baseFontKey = str('style_font_family', '');
+            ensureFont(baseFontKey);
+            popup.style.fontFamily = FONTS[baseFontKey] || '';
 
             // Vertical alignment: flex column on the popup; min-height gives it room.
             popup.style.display = 'flex';
@@ -335,6 +352,7 @@
 
                 // Headline font: override or inherit the base popup font.
                 var hFontKey = str('style_heading_font_family', '');
+                ensureFont(hFontKey);
                 pvHeading.style.fontFamily = hFontKey ? (FONTS[hFontKey] || '') : '';
 
                 // Custom color (else inherit the popup text color).

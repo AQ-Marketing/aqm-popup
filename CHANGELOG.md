@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.3 — 2026-06-26
+
+- **Headline font now previews in real time.** Changing the headline (or base) font in the editor immediately updates the live preview — the chosen Google Font is now loaded into the settings page on the fly instead of only after saving and reloading. The other headline controls (size, weight, color, line height, letter spacing, letter case, italic, alignment, spacing) already updated live.
+
 ## 1.2.2 — 2026-06-26
 
 - **Fixed "have to update twice."** The self-updater compared the new version against the plugin version captured at the start of the request, which is stale right after an update swaps the files mid-request — so it re-offered the update you just installed, and only stopped on the next page load. It now compares against the version WordPress currently sees on disk (`$transient->checked`), clears any stale "update available" entry, and drops the cached GitHub tag data after an install.

@@ -131,13 +131,17 @@ class AQM_Popup_Admin {
             true
         );
 
-        // Font stacks map for the live preview (key => CSS family).
+        // Font maps for the live preview: key => CSS stack, and key => Google
+        // Fonts stylesheet URL (so the preview can lazy-load a newly-picked font).
         $font_stacks = array();
+        $font_urls   = array();
         foreach ( aqm_popup_fonts() as $k => $f ) {
             $font_stacks[ $k ] = $f['stack'];
+            $font_urls[ $k ]   = aqm_popup_google_font_url( $k );
         }
         wp_localize_script( 'aqm-popup-admin-ui', 'aqmPopupUi', array(
-            'fonts' => $font_stacks,
+            'fonts'    => $font_stacks,
+            'fontUrls' => $font_urls,
             'i18n'  => array(
                 'enabled'      => __( 'Live', 'aqm-popup' ),
                 'disabled'     => __( 'Off', 'aqm-popup' ),
