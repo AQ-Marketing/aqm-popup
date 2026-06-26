@@ -86,6 +86,9 @@ class AQM_Popup_Admin {
             return;
         }
         wp_enqueue_media();
+        if ( function_exists( 'wp_enqueue_editor' ) ) {
+            wp_enqueue_editor();
+        }
         wp_enqueue_style(
             'aqm-popup-admin',
             AQM_POPUP_URL . 'assets/css/admin.css',
@@ -387,15 +390,11 @@ class AQM_Popup_Admin {
             'aqm_popup_content_body',
             array(
                 'textarea_name' => $this->fname( $key, false ),
-                'textarea_rows' => 6,
-                'media_buttons' => false,
-                'teeny'         => false,
-                'tinymce'       => array(
-                    'toolbar1'  => 'bold,italic,underline,bullist,numlist,link,unlink,removeformat',
-                    'menubar'   => false,
-                    'statusbar' => false,
-                ),
-                'quicktags'     => array( 'buttons' => 'strong,em,link,ul,ol,li,close' ),
+                'textarea_rows' => 8,
+                'media_buttons' => true,
+                'wpautop'       => true,
+                'tinymce'       => true,
+                'quicktags'     => true,
             )
         );
         echo '</div>';

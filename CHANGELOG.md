@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.1 — 2026-06-26
+
+- **Fixed the rich-text editor showing as a plain box.** The Text field now renders the full WordPress Classic editor (the same TinyMCE editor used on Pages — Visual/Text tabs, full toolbar, and the **Add Media** button for images). The previous re-init left a bare textarea; it now rebuilds the editor with TinyMCE's own commands after the page reorganizes its sections, so the toolbar and content come back correctly.
+
 ## 1.3.0 — 2026-06-26
 
 - **Rich text for the popup body.** The Content "Text" field is now a full WordPress editor (bold, italic, underline, links, bullet/numbered lists) instead of a plain box. Existing plain-text bodies keep working (line breaks are preserved via auto-paragraphs). Output is sanitized with `wp_kses_post` on save and on render.

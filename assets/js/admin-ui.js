@@ -482,10 +482,9 @@
      * ---------------------------------------------------------------- */
     function initRichEditor() {
         var ID = 'aqm_popup_content_body';
-        if (!window.wp || !wp.editor || !wp.editor.initialize) { return; }
+        if (!window.tinymce) { return; }
 
         function bind() {
-            if (!window.tinymce) { return; }
             var ed = window.tinymce.get(ID);
             if (!ed) { return; }
             ed.on('input keyup change NodeChange ExecCommand SetContent Undo Redo', function () {
@@ -493,17 +492,29 @@
             });
         }
 
+        var ed = window.tinymce.get(ID);
+        if (!ed) {
+            // No TinyMCE instance (Text/HTML mode or visual editor disabled) —
+            // the textarea + Quicktags work fine; nothing to repair.
+            return;
+        }
+
         var ta = document.getElementById(ID);
-        var saved = (_savedRichBody !== null) ? _savedRichBody : (ta ? ta.value : '');
-        try { wp.editor.remove(ID); } catch (e) { /* not yet initialized */ }
-        // remove() can sync a blanked TinyMCE iframe back to the textarea — put
-        // the real content back before re-initializing so it's never lost.
-        if (ta) { ta.value = saved; }
-        wp.editor.initialize(ID, {
-            tinymce: { toolbar1: 'bold,italic,underline,bullist,numlist,link,unlink,removeformat', menubar: false, statusbar: false },
-            quicktags: true,
-            mediaButtons: false
-        });
+        // The DOM reorg can blank TinyMCE's iframe, so getContent() may be empty;
+        // fall back to the body captured before the reorg.
+        var saved = ed.getContent();
+        if ((!saved || '' === saved) && _savedRichBody) { saved = _savedRichBody; }
+        if ((!saved || '' === saved) && ta) { saved = ta.value; }
+
+        try {
+            // Re-add TinyMCE in its (moved) location using its own stored config,
+            // so it comes back exactly like the WordPress page editor.
+            window.tinymce.execCommand('mceRemoveEditor', false, ID);
+            if (ta) { ta.value = saved; }
+            window.tinymce.execCommand('mceAddEditor', false, ID);
+        } catch (e) {
+            return;
+        }
         bind();
         if (typeof window.aqmPopupApplyPreview === 'function') { window.aqmPopupApplyPreview(); }
     }
