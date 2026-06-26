@@ -297,6 +297,12 @@
             var radius = Math.max(0, num('popup_border_radius_px', 0));
             popup.style.border = border;
             popup.style.borderRadius = (radius * 0.32) + 'px';
+
+            // Reflect Max width as a relative width (vs a ~1200px reference
+            // viewport) so wider/narrower popups read differently in the preview.
+            var maxW = clamp(num('style_max_width', 480), 240, 1200);
+            popup.style.maxWidth = '94%';
+            popup.style.width = clamp(maxW / 1200 * 100, 30, 92) + '%';
             // Keep the popup itself unclipped so a negative-offset close button
             // can sit outside; clip the image on the inner content wrapper.
             popup.style.overflow = 'visible';

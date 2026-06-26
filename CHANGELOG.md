@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.2.5 — 2026-06-26
+
+- **Settings reorganized by element.** Each thing's controls — including its color — now live together, instead of being scattered across "Popup style", "Typography", and "Behavior":
+  - **Content** — just what the popup says (image, headline, text, button).
+  - **Headline** — color, font, size, weight, alignment, case, italic, line height, letter spacing, spacing below.
+  - **Body & button** — base font, text color/size/weight/alignment, and the button colors.
+  - **Popup box** — background, image + overlay, size, padding, vertical alignment, and the border (width/style/color/radius).
+  - **Backdrop** — the dark screen opacity and the gap from the screen edges.
+  - **Close button**, **Triggers**, **Frequency**, **Behavior** (close on click/ESC), **Test mode**.
+- **Confirmed every visual setting reflects in the live preview**, and added the one that didn't: **Max width** now changes the popup's relative width in the preview. (Behavioral settings — triggers, frequency, close-on-click/ESC, schedule — apply on the front end but can't be shown in a static preview.)
+- No settings were removed or renamed internally, so saved designs are unaffected.
+
 ## 1.2.4 — 2026-06-26
 
 - **Headline color now applies directly.** Previously it only took effect if you also turned on a separate "Custom headline color" checkbox, so setting just the color appeared to do nothing. That toggle is gone — the Headline color picker works on its own, on the front end and in the live preview. Existing designs are migrated so their headline keeps its current color (e.g. a white headline on a photo stays white).

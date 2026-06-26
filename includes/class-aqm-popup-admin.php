@@ -166,80 +166,91 @@ class AQM_Popup_Admin {
             )
         );
 
+        // Shared option lists.
+        $font_options = array();
+        foreach ( aqm_popup_fonts() as $k => $f ) {
+            $font_options[ $k ] = $f['label'];
+        }
+        $heading_font_options = array( '' => __( 'Same as base font', 'aqm-popup' ) );
+        foreach ( aqm_popup_fonts() as $k => $f ) {
+            if ( '' !== $k ) {
+                $heading_font_options[ $k ] = $f['label'];
+            }
+        }
+        $weight_options    = array( '400' => __( 'Normal (400)', 'aqm-popup' ), '500' => __( 'Medium (500)', 'aqm-popup' ), '600' => __( 'Semibold (600)', 'aqm-popup' ), '700' => __( 'Bold (700)', 'aqm-popup' ), '800' => __( 'Extrabold (800)', 'aqm-popup' ) );
+        $transform_options = array( 'none' => __( 'Normal', 'aqm-popup' ), 'uppercase' => __( 'UPPERCASE', 'aqm-popup' ), 'lowercase' => __( 'lowercase', 'aqm-popup' ), 'capitalize' => __( 'Capitalize Each Word', 'aqm-popup' ) );
+        $align_options     = array( 'left' => __( 'Left', 'aqm-popup' ), 'center' => __( 'Center', 'aqm-popup' ), 'right' => __( 'Right', 'aqm-popup' ) );
+        $heading_align_options = array( 'inherit' => __( 'Same as body', 'aqm-popup' ) ) + $align_options;
+        $border_style_options  = array( 'solid' => __( 'Solid', 'aqm-popup' ), 'dashed' => __( 'Dashed', 'aqm-popup' ), 'dotted' => __( 'Dotted', 'aqm-popup' ), 'double' => __( 'Double', 'aqm-popup' ) );
+        $vert_options      = array( 'top' => __( 'Top', 'aqm-popup' ), 'center' => __( 'Center', 'aqm-popup' ), 'bottom' => __( 'Bottom', 'aqm-popup' ) );
+
         // ---- This design (name + schedule) ----
         add_settings_section( 'aqm_popup_design_meta', __( 'This design', 'aqm-popup' ), array( $this, 'section_design_meta_text' ), self::PAGE_SLUG );
         add_settings_field( 'name',       __( 'Design name', 'aqm-popup' ), array( $this, 'field_text' ), self::PAGE_SLUG, 'aqm_popup_design_meta', array( 'key' => 'name', 'placeholder' => __( 'e.g. Spring sale', 'aqm-popup' ) ) );
         add_settings_field( 'start_date', __( 'Start date', 'aqm-popup' ),  array( $this, 'field_date' ), self::PAGE_SLUG, 'aqm_popup_design_meta', array( 'key' => 'start_date', 'description' => __( 'Optional. The active popup will not show before this date (your site timezone). Leave empty for no start limit.', 'aqm-popup' ) ) );
         add_settings_field( 'end_date',   __( 'End date', 'aqm-popup' ),    array( $this, 'field_date' ), self::PAGE_SLUG, 'aqm_popup_design_meta', array( 'key' => 'end_date', 'description' => __( 'Optional. The active popup stops showing after this date (end of day, site timezone). Leave empty for no end.', 'aqm-popup' ) ) );
 
-        // ---- Content ----
+        // ---- Content (what the popup says) ----
         add_settings_section( 'aqm_popup_content', __( 'Content', 'aqm-popup' ), array( $this, 'section_content_text' ), self::PAGE_SLUG );
         add_settings_field( 'content_image_id',       __( 'Image', 'aqm-popup' ),               array( $this, 'field_image' ),    self::PAGE_SLUG, 'aqm_popup_content', array( 'key' => 'content_image_id' ) );
-        add_settings_field( 'content_heading',        __( 'Headline', 'aqm-popup' ),            array( $this, 'field_text' ),     self::PAGE_SLUG, 'aqm_popup_content', array( 'key' => 'content_heading', 'placeholder' => __( 'e.g. Spring sale — 20% off', 'aqm-popup' ) ) );
-        add_settings_field( 'content_body',           __( 'Text', 'aqm-popup' ),                array( $this, 'field_textarea' ), self::PAGE_SLUG, 'aqm_popup_content', array( 'key' => 'content_body', 'description' => __( 'A short paragraph. Line breaks are preserved.', 'aqm-popup' ) ) );
+        add_settings_field( 'content_heading',        __( 'Headline', 'aqm-popup' ),            array( $this, 'field_text' ),     self::PAGE_SLUG, 'aqm_popup_content', array( 'key' => 'content_heading', 'placeholder' => __( 'e.g. Spring sale — 20% off', 'aqm-popup' ), 'description' => __( 'Style this in the Headline section below.', 'aqm-popup' ) ) );
+        add_settings_field( 'content_body',           __( 'Text', 'aqm-popup' ),                array( $this, 'field_textarea' ), self::PAGE_SLUG, 'aqm_popup_content', array( 'key' => 'content_body', 'description' => __( 'A short paragraph. Line breaks are preserved. Style it in the Body & button section.', 'aqm-popup' ) ) );
         add_settings_field( 'content_button_label',   __( 'Button label', 'aqm-popup' ),        array( $this, 'field_text' ),     self::PAGE_SLUG, 'aqm_popup_content', array( 'key' => 'content_button_label', 'placeholder' => __( 'e.g. Shop now', 'aqm-popup' ), 'description' => __( 'Leave empty to hide the button.', 'aqm-popup' ) ) );
         add_settings_field( 'content_button_url',     __( 'Button link', 'aqm-popup' ),         array( $this, 'field_text' ),     self::PAGE_SLUG, 'aqm_popup_content', array( 'key' => 'content_button_url', 'placeholder' => 'https://', 'input_type' => 'url' ) );
         add_settings_field( 'content_button_new_tab', __( 'Open link in new tab', 'aqm-popup' ), array( $this, 'field_checkbox' ), self::PAGE_SLUG, 'aqm_popup_content', array( 'key' => 'content_button_new_tab' ) );
 
-        // ---- Popup style ----
-        add_settings_section( 'aqm_popup_style', __( 'Popup style', 'aqm-popup' ), array( $this, 'section_style_text' ), self::PAGE_SLUG );
-        add_settings_field( 'style_bg_color',          __( 'Background color', 'aqm-popup' ),    array( $this, 'field_color' ),  self::PAGE_SLUG, 'aqm_popup_style', array( 'key' => 'style_bg_color' ) );
-        add_settings_field( 'style_bg_image_id',       __( 'Background image', 'aqm-popup' ),    array( $this, 'field_image' ),  self::PAGE_SLUG, 'aqm_popup_style', array( 'key' => 'style_bg_image_id', 'description' => __( 'Optional. Fills the whole popup behind your text and button (scaled to cover). The background color shows while it loads, or if you remove it.', 'aqm-popup' ) ) );
-        add_settings_field( 'style_bg_overlay_color',   __( 'Image overlay color', 'aqm-popup' ),  array( $this, 'field_color' ),  self::PAGE_SLUG, 'aqm_popup_style', array( 'key' => 'style_bg_overlay_color' ) );
-        add_settings_field( 'style_bg_overlay_opacity', __( 'Image overlay opacity', 'aqm-popup' ),array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_style', array( 'key' => 'style_bg_overlay_opacity', 'min' => 0, 'max' => 1, 'step' => '0.05', 'description' => __( 'A tint laid OVER the background image (behind your text) so text stays readable. 0 = no overlay. Only applies when a background image is set.', 'aqm-popup' ) ) );
-        add_settings_field( 'style_text_color',        __( 'Text color', 'aqm-popup' ),          array( $this, 'field_color' ),  self::PAGE_SLUG, 'aqm_popup_style', array( 'key' => 'style_text_color' ) );
-        add_settings_field( 'style_button_bg',         __( 'Button color', 'aqm-popup' ),        array( $this, 'field_color' ),  self::PAGE_SLUG, 'aqm_popup_style', array( 'key' => 'style_button_bg' ) );
-        add_settings_field( 'style_button_text_color', __( 'Button text color', 'aqm-popup' ),   array( $this, 'field_color' ),  self::PAGE_SLUG, 'aqm_popup_style', array( 'key' => 'style_button_text_color' ) );
-        add_settings_field( 'style_max_width',         __( 'Max width (px)', 'aqm-popup' ),      array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_style', array( 'key' => 'style_max_width', 'min' => 240, 'max' => 1200, 'step' => 10, 'description' => __( 'How wide the popup can grow on larger screens.', 'aqm-popup' ) ) );
-        add_settings_field( 'style_min_height',        __( 'Minimum height (px)', 'aqm-popup' ), array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_style', array( 'key' => 'style_min_height', 'min' => 0, 'max' => 1200, 'step' => 10, 'description' => __( 'Force the popup to be at least this tall. Needed for vertical centering to have room to work. 0 = fit content.', 'aqm-popup' ) ) );
-        add_settings_field( 'style_padding',           __( 'Inner padding (px)', 'aqm-popup' ),  array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_style', array( 'key' => 'style_padding', 'min' => 0, 'max' => 96, 'step' => 1, 'description' => __( 'Space between the popup edge and the text/button. The image sits flush at the top.', 'aqm-popup' ) ) );
-        add_settings_field( 'style_align',             __( 'Text alignment', 'aqm-popup' ),      array( $this, 'field_select' ), self::PAGE_SLUG, 'aqm_popup_style', array( 'key' => 'style_align', 'options' => array( 'left' => __( 'Left', 'aqm-popup' ), 'center' => __( 'Center', 'aqm-popup' ), 'right' => __( 'Right', 'aqm-popup' ) ) ) );
-        add_settings_field( 'style_vertical_align',    __( 'Vertical alignment', 'aqm-popup' ),  array( $this, 'field_select' ), self::PAGE_SLUG, 'aqm_popup_style', array( 'key' => 'style_vertical_align', 'options' => array( 'top' => __( 'Top', 'aqm-popup' ), 'center' => __( 'Center', 'aqm-popup' ), 'bottom' => __( 'Bottom', 'aqm-popup' ) ), 'description' => __( 'Where the content sits within the popup. Center/Bottom only differ from Top when the popup is taller than its content (e.g. with a Minimum height or background image).', 'aqm-popup' ) ) );
+        // ---- Headline (everything about the headline) ----
+        add_settings_section( 'aqm_popup_headline', __( 'Headline', 'aqm-popup' ), array( $this, 'section_headline_text' ), self::PAGE_SLUG );
+        add_settings_field( 'style_heading_color',          __( 'Color', 'aqm-popup' ),         array( $this, 'field_color' ),  self::PAGE_SLUG, 'aqm_popup_headline', array( 'key' => 'style_heading_color' ) );
+        add_settings_field( 'style_heading_font_family',    __( 'Font', 'aqm-popup' ),          array( $this, 'field_select' ), self::PAGE_SLUG, 'aqm_popup_headline', array( 'key' => 'style_heading_font_family', 'options' => $heading_font_options, 'description' => __( 'Optionally give the headline its own font.', 'aqm-popup' ) ) );
+        add_settings_field( 'style_heading_size',           __( 'Size (px)', 'aqm-popup' ),     array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_headline', array( 'key' => 'style_heading_size', 'min' => 10, 'max' => 96, 'step' => 1 ) );
+        add_settings_field( 'style_heading_weight',         __( 'Weight', 'aqm-popup' ),        array( $this, 'field_select' ), self::PAGE_SLUG, 'aqm_popup_headline', array( 'key' => 'style_heading_weight', 'options' => $weight_options ) );
+        add_settings_field( 'style_heading_align',          __( 'Alignment', 'aqm-popup' ),     array( $this, 'field_select' ), self::PAGE_SLUG, 'aqm_popup_headline', array( 'key' => 'style_heading_align', 'options' => $heading_align_options ) );
+        add_settings_field( 'style_heading_transform',      __( 'Letter case', 'aqm-popup' ),   array( $this, 'field_select' ), self::PAGE_SLUG, 'aqm_popup_headline', array( 'key' => 'style_heading_transform', 'options' => $transform_options ) );
+        add_settings_field( 'style_heading_italic',         __( 'Italic', 'aqm-popup' ),        array( $this, 'field_checkbox' ), self::PAGE_SLUG, 'aqm_popup_headline', array( 'key' => 'style_heading_italic' ) );
+        add_settings_field( 'style_heading_line_height',    __( 'Line height', 'aqm-popup' ),   array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_headline', array( 'key' => 'style_heading_line_height', 'min' => '0.8', 'max' => '3', 'step' => '0.05', 'description' => __( 'A multiple of the font size (e.g. 1.2).', 'aqm-popup' ) ) );
+        add_settings_field( 'style_heading_letter_spacing', __( 'Letter spacing (px)', 'aqm-popup' ), array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_headline', array( 'key' => 'style_heading_letter_spacing', 'min' => -5, 'max' => 20, 'step' => '0.5', 'description' => __( 'Can be negative to tighten.', 'aqm-popup' ) ) );
+        add_settings_field( 'style_heading_margin_bottom',  __( 'Space below (px)', 'aqm-popup' ), array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_headline', array( 'key' => 'style_heading_margin_bottom', 'min' => 0, 'max' => 80, 'step' => 1 ) );
 
-        // ---- Typography ----
-        add_settings_section( 'aqm_popup_type', __( 'Typography', 'aqm-popup' ), array( $this, 'section_type_text' ), self::PAGE_SLUG );
-        $font_options = array();
-        foreach ( aqm_popup_fonts() as $k => $f ) {
-            $font_options[ $k ] = $f['label'];
-        }
-        $weight_options = array( '400' => __( 'Normal (400)', 'aqm-popup' ), '500' => __( 'Medium (500)', 'aqm-popup' ), '600' => __( 'Semibold (600)', 'aqm-popup' ), '700' => __( 'Bold (700)', 'aqm-popup' ), '800' => __( 'Extrabold (800)', 'aqm-popup' ) );
-        add_settings_field( 'style_font_family',   __( 'Base font', 'aqm-popup' ),     array( $this, 'field_select' ), self::PAGE_SLUG, 'aqm_popup_type', array( 'key' => 'style_font_family', 'options' => $font_options, 'description' => __( 'Used for the whole popup. Google Fonts load automatically on the front end. "Theme default" uses your site\'s existing font (no extra request). The headline can override this below.', 'aqm-popup' ) ) );
+        // ---- Body & button (paragraph text + the button) ----
+        add_settings_section( 'aqm_popup_body', __( 'Body & button', 'aqm-popup' ), array( $this, 'section_body_text' ), self::PAGE_SLUG );
+        add_settings_field( 'style_font_family',       __( 'Base font', 'aqm-popup' ),     array( $this, 'field_select' ), self::PAGE_SLUG, 'aqm_popup_body', array( 'key' => 'style_font_family', 'options' => $font_options, 'description' => __( 'The popup\'s default font (used by the text, button, and the headline unless it overrides). Google Fonts load automatically; "Theme default" uses your site font.', 'aqm-popup' ) ) );
+        add_settings_field( 'style_text_color',        __( 'Text color', 'aqm-popup' ),    array( $this, 'field_color' ),  self::PAGE_SLUG, 'aqm_popup_body', array( 'key' => 'style_text_color' ) );
+        add_settings_field( 'style_body_size',         __( 'Text size (px)', 'aqm-popup' ),array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_body', array( 'key' => 'style_body_size', 'min' => 10, 'max' => 48, 'step' => 1 ) );
+        add_settings_field( 'style_body_weight',       __( 'Text weight', 'aqm-popup' ),   array( $this, 'field_select' ), self::PAGE_SLUG, 'aqm_popup_body', array( 'key' => 'style_body_weight', 'options' => $weight_options ) );
+        add_settings_field( 'style_align',             __( 'Text alignment', 'aqm-popup' ),array( $this, 'field_select' ), self::PAGE_SLUG, 'aqm_popup_body', array( 'key' => 'style_align', 'options' => $align_options, 'description' => __( 'Default alignment for all popup text (the headline can override it).', 'aqm-popup' ) ) );
+        add_settings_field( 'style_button_bg',         __( 'Button color', 'aqm-popup' ),      array( $this, 'field_color' ), self::PAGE_SLUG, 'aqm_popup_body', array( 'key' => 'style_button_bg' ) );
+        add_settings_field( 'style_button_text_color', __( 'Button text color', 'aqm-popup' ), array( $this, 'field_color' ), self::PAGE_SLUG, 'aqm_popup_body', array( 'key' => 'style_button_text_color' ) );
 
-        // Headline-specific typography. "Same as popup font" / "inherit" defaults
-        // keep existing designs looking exactly as they did.
-        $heading_font_options = array( '' => __( 'Same as base font', 'aqm-popup' ) );
-        foreach ( aqm_popup_fonts() as $k => $f ) {
-            if ( '' === $k ) {
-                continue;
-            }
-            $heading_font_options[ $k ] = $f['label'];
-        }
-        $transform_options = array(
-            'none'       => __( 'Normal', 'aqm-popup' ),
-            'uppercase'  => __( 'UPPERCASE', 'aqm-popup' ),
-            'lowercase'  => __( 'lowercase', 'aqm-popup' ),
-            'capitalize' => __( 'Capitalize Each Word', 'aqm-popup' ),
-        );
-        $heading_align_options = array(
-            'inherit' => __( 'Same as popup', 'aqm-popup' ),
-            'left'    => __( 'Left', 'aqm-popup' ),
-            'center'  => __( 'Center', 'aqm-popup' ),
-            'right'   => __( 'Right', 'aqm-popup' ),
-        );
+        // ---- Popup box (the card itself) ----
+        add_settings_section( 'aqm_popup_box', __( 'Popup box', 'aqm-popup' ), array( $this, 'section_box_text' ), self::PAGE_SLUG );
+        add_settings_field( 'style_bg_color',          __( 'Background color', 'aqm-popup' ),    array( $this, 'field_color' ),  self::PAGE_SLUG, 'aqm_popup_box', array( 'key' => 'style_bg_color' ) );
+        add_settings_field( 'style_bg_image_id',       __( 'Background image', 'aqm-popup' ),    array( $this, 'field_image' ),  self::PAGE_SLUG, 'aqm_popup_box', array( 'key' => 'style_bg_image_id', 'description' => __( 'Optional. Fills the whole popup behind your text and button (scaled to cover). The background color shows while it loads, or if you remove it.', 'aqm-popup' ) ) );
+        add_settings_field( 'style_bg_overlay_color',   __( 'Image overlay color', 'aqm-popup' ),  array( $this, 'field_color' ),  self::PAGE_SLUG, 'aqm_popup_box', array( 'key' => 'style_bg_overlay_color' ) );
+        add_settings_field( 'style_bg_overlay_opacity', __( 'Image overlay opacity', 'aqm-popup' ),array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_box', array( 'key' => 'style_bg_overlay_opacity', 'min' => 0, 'max' => 1, 'step' => '0.05', 'description' => __( 'A tint laid OVER the background image (behind your text) so text stays readable. 0 = no overlay. Only applies when a background image is set.', 'aqm-popup' ) ) );
+        add_settings_field( 'style_max_width',         __( 'Max width (px)', 'aqm-popup' ),      array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_box', array( 'key' => 'style_max_width', 'min' => 240, 'max' => 1200, 'step' => 10, 'description' => __( 'How wide the popup can grow on larger screens.', 'aqm-popup' ) ) );
+        add_settings_field( 'style_min_height',        __( 'Minimum height (px)', 'aqm-popup' ), array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_box', array( 'key' => 'style_min_height', 'min' => 0, 'max' => 1200, 'step' => 10, 'description' => __( 'Force the popup to be at least this tall. Needed for vertical centering to have room to work. 0 = fit content.', 'aqm-popup' ) ) );
+        add_settings_field( 'style_padding',           __( 'Inner padding (px)', 'aqm-popup' ),  array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_box', array( 'key' => 'style_padding', 'min' => 0, 'max' => 96, 'step' => 1, 'description' => __( 'Space between the popup edge and the text/button. The image sits flush at the top.', 'aqm-popup' ) ) );
+        add_settings_field( 'style_vertical_align',    __( 'Vertical alignment', 'aqm-popup' ),  array( $this, 'field_select' ), self::PAGE_SLUG, 'aqm_popup_box', array( 'key' => 'style_vertical_align', 'options' => $vert_options, 'description' => __( 'Where the content sits within the popup. Center/Bottom only differ from Top when the popup is taller than its content (e.g. with a Minimum height or background image).', 'aqm-popup' ) ) );
+        add_settings_field( 'style_border_width', __( 'Border width (px)', 'aqm-popup' ),  array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_box', array( 'key' => 'style_border_width', 'min' => 0, 'max' => 40, 'step' => 1, 'description' => __( 'A border around the whole popup. 0 = no border.', 'aqm-popup' ) ) );
+        add_settings_field( 'style_border_style', __( 'Border style', 'aqm-popup' ),       array( $this, 'field_select' ), self::PAGE_SLUG, 'aqm_popup_box', array( 'key' => 'style_border_style', 'options' => $border_style_options ) );
+        add_settings_field( 'style_border_color', __( 'Border color', 'aqm-popup' ),       array( $this, 'field_color' ),  self::PAGE_SLUG, 'aqm_popup_box', array( 'key' => 'style_border_color' ) );
+        add_settings_field( 'popup_border_radius_px', __( 'Border radius (px)', 'aqm-popup' ), array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_box', array( 'key' => 'popup_border_radius_px', 'min' => 0, 'max' => 200, 'step' => 1, 'description' => __( 'Rounded corners on the popup (and the border, if set above).', 'aqm-popup' ) ) );
+        add_settings_field( 'popup_border',           __( 'Border (advanced CSS)',     'aqm-popup' ), array( $this, 'field_text' ),   self::PAGE_SLUG, 'aqm_popup_box', array( 'key' => 'popup_border',          'placeholder' => 'e.g. 5px solid #ffffff', 'description' => __( 'Optional. Leave empty to use the Border width/style/color above. If set, this CSS <code>border</code> shorthand overrides them — e.g. <code>5px solid #ffffff</code>.', 'aqm-popup' ) ) );
 
-        add_settings_field( 'style_heading_font_family',    __( 'Headline font', 'aqm-popup' ),          array( $this, 'field_select' ), self::PAGE_SLUG, 'aqm_popup_type', array( 'key' => 'style_heading_font_family', 'options' => $heading_font_options, 'description' => __( 'Optionally give the headline its own font.', 'aqm-popup' ) ) );
-        add_settings_field( 'style_heading_size',           __( 'Headline size (px)', 'aqm-popup' ),     array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_type', array( 'key' => 'style_heading_size', 'min' => 10, 'max' => 96, 'step' => 1 ) );
-        add_settings_field( 'style_heading_weight',         __( 'Headline weight', 'aqm-popup' ),        array( $this, 'field_select' ), self::PAGE_SLUG, 'aqm_popup_type', array( 'key' => 'style_heading_weight', 'options' => $weight_options ) );
-        add_settings_field( 'style_heading_color',          __( 'Headline color', 'aqm-popup' ),         array( $this, 'field_color' ),  self::PAGE_SLUG, 'aqm_popup_type', array( 'key' => 'style_heading_color', 'description' => __( 'Color of the headline. (The paragraph text uses the popup Text color in Popup style.)', 'aqm-popup' ) ) );
-        add_settings_field( 'style_heading_line_height',    __( 'Headline line height', 'aqm-popup' ),   array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_type', array( 'key' => 'style_heading_line_height', 'min' => '0.8', 'max' => '3', 'step' => '0.05', 'description' => __( 'Space between lines, as a multiple of the font size (e.g. 1.2).', 'aqm-popup' ) ) );
-        add_settings_field( 'style_heading_letter_spacing', __( 'Headline letter spacing (px)', 'aqm-popup' ), array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_type', array( 'key' => 'style_heading_letter_spacing', 'min' => -5, 'max' => 20, 'step' => '0.5', 'description' => __( 'Space between letters. Can be negative to tighten.', 'aqm-popup' ) ) );
-        add_settings_field( 'style_heading_transform',      __( 'Headline letter case', 'aqm-popup' ),   array( $this, 'field_select' ), self::PAGE_SLUG, 'aqm_popup_type', array( 'key' => 'style_heading_transform', 'options' => $transform_options ) );
-        add_settings_field( 'style_heading_italic',         __( 'Headline italic', 'aqm-popup' ),        array( $this, 'field_checkbox' ), self::PAGE_SLUG, 'aqm_popup_type', array( 'key' => 'style_heading_italic' ) );
-        add_settings_field( 'style_heading_align',          __( 'Headline alignment', 'aqm-popup' ),     array( $this, 'field_select' ), self::PAGE_SLUG, 'aqm_popup_type', array( 'key' => 'style_heading_align', 'options' => $heading_align_options ) );
-        add_settings_field( 'style_heading_margin_bottom',  __( 'Space below headline (px)', 'aqm-popup' ), array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_type', array( 'key' => 'style_heading_margin_bottom', 'min' => 0, 'max' => 80, 'step' => 1 ) );
+        // ---- Backdrop (the dark area behind the popup) ----
+        add_settings_section( 'aqm_popup_backdrop', __( 'Backdrop', 'aqm-popup' ), array( $this, 'section_backdrop_text' ), self::PAGE_SLUG );
+        add_settings_field( 'overlay_opacity',            __( 'Backdrop opacity',          'aqm-popup' ), array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_backdrop', array( 'key' => 'overlay_opacity', 'min' => 0, 'max' => 1, 'step' => '0.05', 'description' => __( 'The dark screen behind the popup. 0 (transparent) to 1 (opaque black).', 'aqm-popup' ) ) );
+        add_settings_field( 'overlay_padding_vertical',   __( 'Edge gap — top/bottom (px)', 'aqm-popup' ), array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_backdrop', array( 'key' => 'overlay_padding_vertical',   'min' => 0, 'step' => 1, 'description' => __( 'Inset the popup from the top/bottom of the screen. The backdrop fills the gap.', 'aqm-popup' ) ) );
+        add_settings_field( 'overlay_padding_horizontal', __( 'Edge gap — left/right (px)', 'aqm-popup' ), array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_backdrop', array( 'key' => 'overlay_padding_horizontal', 'min' => 0, 'step' => 1, 'description' => __( 'Inset the popup from the left/right of the screen.', 'aqm-popup' ) ) );
 
-        add_settings_field( 'style_body_size',     __( 'Text size (px)', 'aqm-popup' ),       array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_type', array( 'key' => 'style_body_size', 'min' => 10, 'max' => 48, 'step' => 1 ) );
-        add_settings_field( 'style_body_weight',   __( 'Text weight', 'aqm-popup' ),          array( $this, 'field_select' ), self::PAGE_SLUG, 'aqm_popup_type', array( 'key' => 'style_body_weight', 'options' => $weight_options ) );
+        // ---- Close button ----
+        add_settings_section( 'aqm_popup_close_icon', __( 'Close button', 'aqm-popup' ), array( $this, 'section_close_icon_text' ), self::PAGE_SLUG );
+        add_settings_field( 'close_size_px',          __( 'Button size (px)',         'aqm-popup' ), array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_close_icon', array( 'key' => 'close_size_px',         'min' => 16, 'max' => 200, 'step' => 1, 'description' => __( 'Width and height of the close button. The X icon scales proportionally.', 'aqm-popup' ) ) );
+        add_settings_field( 'close_offset_px',        __( 'Distance from corner (px)','aqm-popup' ), array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_close_icon', array( 'key' => 'close_offset_px',       'min' => -100, 'max' => 100, 'step' => 1, 'description' => __( 'How far the button sits from the popup\'s top-right corner. Use a negative number to place it OUTSIDE the popup — e.g. -16.', 'aqm-popup' ) ) );
+        add_settings_field( 'close_background',       __( 'Background',                'aqm-popup' ), array( $this, 'field_text' ),   self::PAGE_SLUG, 'aqm_popup_close_icon', array( 'key' => 'close_background',      'placeholder' => 'transparent', 'description' => __( 'Any valid CSS color. Examples: <code>transparent</code>, <code>rgba(0,0,0,0.55)</code>, <code>#ffffff</code>.', 'aqm-popup' ) ) );
+        add_settings_field( 'close_icon_color',       __( 'Icon color',                'aqm-popup' ), array( $this, 'field_text' ),   self::PAGE_SLUG, 'aqm_popup_close_icon', array( 'key' => 'close_icon_color',      'placeholder' => '#ffffff',     'description' => __( 'Color of the X mark. Any valid CSS color.', 'aqm-popup' ) ) );
+        add_settings_field( 'close_border_radius_px', __( 'Border radius (px)',        'aqm-popup' ), array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_close_icon', array( 'key' => 'close_border_radius_px','min' => 0, 'max' => 100, 'step' => 1, 'description' => __( 'Roundness of the background. Half the button size = a circle; 0 = a square.', 'aqm-popup' ) ) );
 
         // ---- Triggers ----
         add_settings_section( 'aqm_popup_triggers', __( 'Triggers', 'aqm-popup' ), array( $this, 'section_triggers_text' ), self::PAGE_SLUG );
@@ -253,32 +264,10 @@ class AQM_Popup_Admin {
         add_settings_field( 'max_per_session', __( 'Max shows per session', 'aqm-popup' ),    array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_frequency', array( 'key' => 'max_per_session', 'min' => 1, 'step' => 1, 'description' => __( 'How many times the popup can appear during a single browser session.', 'aqm-popup' ) ) );
         add_settings_field( 'cooldown_days',   __( 'Cooldown after dismissal (days)', 'aqm-popup' ), array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_frequency', array( 'key' => 'cooldown_days', 'min' => 0, 'step' => '0.5', 'description' => __( 'After a visitor closes the popup, suppress it for this many days. Set to 0 to disable the cooldown.', 'aqm-popup' ) ) );
 
-        // ---- Behavior ----
-        add_settings_section( 'aqm_popup_behavior', __( 'Behavior', 'aqm-popup' ), '__return_false', self::PAGE_SLUG );
-        add_settings_field( 'close_on_overlay_click', __( 'Close on click outside', 'aqm-popup' ), array( $this, 'field_checkbox' ), self::PAGE_SLUG, 'aqm_popup_behavior', array( 'key' => 'close_on_overlay_click', 'description' => __( 'Clicking the dark overlay area dismisses the popup and starts the cooldown.', 'aqm-popup' ) ) );
+        // ---- Behavior (how it closes) ----
+        add_settings_section( 'aqm_popup_behavior', __( 'Behavior', 'aqm-popup' ), array( $this, 'section_behavior_text' ), self::PAGE_SLUG );
+        add_settings_field( 'close_on_overlay_click', __( 'Close on click outside', 'aqm-popup' ), array( $this, 'field_checkbox' ), self::PAGE_SLUG, 'aqm_popup_behavior', array( 'key' => 'close_on_overlay_click', 'description' => __( 'Clicking the dark backdrop dismisses the popup and starts the cooldown.', 'aqm-popup' ) ) );
         add_settings_field( 'close_on_esc',           __( 'Close on ESC key',       'aqm-popup' ), array( $this, 'field_checkbox' ), self::PAGE_SLUG, 'aqm_popup_behavior', array( 'key' => 'close_on_esc' ) );
-        add_settings_field( 'overlay_opacity',        __( 'Overlay opacity',        'aqm-popup' ), array( $this, 'field_number' ),   self::PAGE_SLUG, 'aqm_popup_behavior', array( 'key' => 'overlay_opacity', 'min' => 0, 'max' => 1, 'step' => '0.05', 'description' => __( 'The dark backdrop behind the popup. Between 0 (transparent) and 1 (opaque black).', 'aqm-popup' ) ) );
-        add_settings_field( 'overlay_padding_vertical',   __( 'Overlay padding — top/bottom (px)',   'aqm-popup' ), array( $this, 'field_number' ),   self::PAGE_SLUG, 'aqm_popup_behavior', array( 'key' => 'overlay_padding_vertical',   'min' => 0, 'step' => 1, 'description' => __( 'Inset the popup vertically from the viewport edges. The dark backdrop fills the padded area.', 'aqm-popup' ) ) );
-        add_settings_field( 'overlay_padding_horizontal', __( 'Overlay padding — left/right (px)',   'aqm-popup' ), array( $this, 'field_number' ),   self::PAGE_SLUG, 'aqm_popup_behavior', array( 'key' => 'overlay_padding_horizontal', 'min' => 0, 'step' => 1, 'description' => __( 'Inset the popup horizontally from the viewport edges. The dark backdrop fills the padded area.', 'aqm-popup' ) ) );
-        $border_style_options = array(
-            'solid'  => __( 'Solid', 'aqm-popup' ),
-            'dashed' => __( 'Dashed', 'aqm-popup' ),
-            'dotted' => __( 'Dotted', 'aqm-popup' ),
-            'double' => __( 'Double', 'aqm-popup' ),
-        );
-        add_settings_field( 'style_border_width', __( 'Border width (px)', 'aqm-popup' ),  array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_behavior', array( 'key' => 'style_border_width', 'min' => 0, 'max' => 40, 'step' => 1, 'description' => __( 'A border around the whole popup. 0 = no border.', 'aqm-popup' ) ) );
-        add_settings_field( 'style_border_style', __( 'Border style', 'aqm-popup' ),       array( $this, 'field_select' ), self::PAGE_SLUG, 'aqm_popup_behavior', array( 'key' => 'style_border_style', 'options' => $border_style_options ) );
-        add_settings_field( 'style_border_color', __( 'Border color', 'aqm-popup' ),       array( $this, 'field_color' ),  self::PAGE_SLUG, 'aqm_popup_behavior', array( 'key' => 'style_border_color' ) );
-        add_settings_field( 'popup_border_radius_px', __( 'Border radius (px)', 'aqm-popup' ), array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_behavior', array( 'key' => 'popup_border_radius_px', 'min' => 0, 'max' => 200, 'step' => 1, 'description' => __( 'Rounded corners on the popup (and the border, if set above).', 'aqm-popup' ) ) );
-        add_settings_field( 'popup_border',           __( 'Border (advanced CSS)',     'aqm-popup' ), array( $this, 'field_text' ),   self::PAGE_SLUG, 'aqm_popup_behavior', array( 'key' => 'popup_border',          'placeholder' => 'e.g. 5px solid #ffffff', 'description' => __( 'Optional. Leave empty to use the Border width/style/color above. If set, this CSS <code>border</code> shorthand overrides them — e.g. <code>5px solid #ffffff</code> or <code>2px dashed rgba(0,0,0,0.4)</code>.', 'aqm-popup' ) ) );
-
-        // ---- Close icon ----
-        add_settings_section( 'aqm_popup_close_icon', __( 'Close icon', 'aqm-popup' ), array( $this, 'section_close_icon_text' ), self::PAGE_SLUG );
-        add_settings_field( 'close_size_px',          __( 'Button size (px)',         'aqm-popup' ), array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_close_icon', array( 'key' => 'close_size_px',         'min' => 16, 'max' => 200, 'step' => 1, 'description' => __( 'Width and height of the close button. The X icon scales proportionally.', 'aqm-popup' ) ) );
-        add_settings_field( 'close_offset_px',        __( 'Distance from corner (px)','aqm-popup' ), array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_close_icon', array( 'key' => 'close_offset_px',       'min' => -100, 'max' => 100, 'step' => 1, 'description' => __( 'How far the button sits from the popup\'s top-right corner. Use a negative number to place it OUTSIDE the popup — e.g. -16.', 'aqm-popup' ) ) );
-        add_settings_field( 'close_background',       __( 'Background',                'aqm-popup' ), array( $this, 'field_text' ),   self::PAGE_SLUG, 'aqm_popup_close_icon', array( 'key' => 'close_background',      'placeholder' => 'transparent', 'description' => __( 'Any valid CSS color. Examples: <code>transparent</code>, <code>rgba(0,0,0,0.55)</code>, <code>#ffffff</code>.', 'aqm-popup' ) ) );
-        add_settings_field( 'close_icon_color',       __( 'Icon color',                'aqm-popup' ), array( $this, 'field_text' ),   self::PAGE_SLUG, 'aqm_popup_close_icon', array( 'key' => 'close_icon_color',      'placeholder' => '#ffffff',     'description' => __( 'Color of the X mark. Any valid CSS color.', 'aqm-popup' ) ) );
-        add_settings_field( 'close_border_radius_px', __( 'Border radius (px)',        'aqm-popup' ), array( $this, 'field_number' ), self::PAGE_SLUG, 'aqm_popup_close_icon', array( 'key' => 'close_border_radius_px','min' => 0, 'max' => 100, 'step' => 1, 'description' => __( 'Roundness of the background. Half the button size = a circle; 0 = a square.', 'aqm-popup' ) ) );
 
         // ---- Test mode (global) ----
         add_settings_section( 'aqm_popup_test_mode', __( 'Test mode', 'aqm-popup' ), array( $this, 'section_test_mode_text' ), self::PAGE_SLUG );
@@ -291,19 +280,28 @@ class AQM_Popup_Admin {
         echo '<p>' . esc_html__( 'You are editing one design. Use the Designs list above to switch, add, duplicate, archive, or activate a design. Dates here control when the ACTIVE design is allowed to show.', 'aqm-popup' ) . '</p>';
     }
     public function section_content_text() {
-        echo '<p>' . esc_html__( 'Build the popup — an image, a headline, a short paragraph, and an optional button. Any field you leave empty is simply skipped.', 'aqm-popup' ) . '</p>';
+        echo '<p>' . esc_html__( 'What the popup says: an image, a headline, a short paragraph, and an optional button. Any field you leave empty is skipped. Styling lives in the sections below.', 'aqm-popup' ) . '</p>';
     }
-    public function section_style_text() {
-        echo '<p>' . esc_html__( 'Colors, sizing, and alignment for the popup body. Watch the live preview update as you change these.', 'aqm-popup' ) . '</p>';
+    public function section_headline_text() {
+        echo '<p>' . esc_html__( 'Everything about the headline — color, font, size, weight, alignment, and spacing. (Only shows when you set a headline in Content.)', 'aqm-popup' ) . '</p>';
     }
-    public function section_type_text() {
-        echo '<p>' . esc_html__( 'Choose a font and set the headline and text size + weight.', 'aqm-popup' ) . '</p>';
+    public function section_body_text() {
+        echo '<p>' . esc_html__( 'The paragraph text and the button. The base font here is the popup default; the headline can override it.', 'aqm-popup' ) . '</p>';
+    }
+    public function section_box_text() {
+        echo '<p>' . esc_html__( 'The popup card itself — background, size, padding, vertical alignment, and border.', 'aqm-popup' ) . '</p>';
+    }
+    public function section_backdrop_text() {
+        echo '<p>' . esc_html__( 'The dark screen behind the popup, and how far the popup sits from the screen edges.', 'aqm-popup' ) . '</p>';
     }
     public function section_triggers_text() {
         echo '<p>' . esc_html__( 'Enable any combination of triggers. The popup appears as soon as the first enabled trigger fires.', 'aqm-popup' ) . '</p>';
     }
     public function section_frequency_text() {
         echo '<p>' . esc_html__( 'Control how often the popup shows. Per-session count resets when the browser tab closes; cooldown persists across sessions.', 'aqm-popup' ) . '</p>';
+    }
+    public function section_behavior_text() {
+        echo '<p>' . esc_html__( 'How visitors can dismiss the popup.', 'aqm-popup' ) . '</p>';
     }
     public function section_close_icon_text() {
         echo '<p>' . esc_html__( 'Style the X button that closes the popup.', 'aqm-popup' ) . '</p>';

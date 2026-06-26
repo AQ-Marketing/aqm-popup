@@ -39,13 +39,25 @@ WP Admin → **AQM Popup**. The page has a **Designs** manager, a per-design edi
 
 Any field left empty is skipped — an image-only, text-only, or background-image-only popup all work.
 
-### Popup style
+Styling is organized by the element it affects, so a thing's controls (including its color) are all in one place:
 
-Background color, **background image** (with an optional **overlay tint** for legibility), text color, button colors, max width, **minimum height**, inner padding, **text alignment** (left / center / right), and **vertical alignment** (top / center / bottom — needs a minimum height or background image to have room to work). Colors use a native color picker; everything updates in the live preview.
+### Headline
 
-### Typography
+Color, **font** (override the base, or a Google Font), size, weight, alignment, **letter case** (uppercase / lowercase / capitalize), italic, line height, letter spacing, and space below.
 
-Choose a **base font** — Theme default (your site's font, no extra request) or a Google Font (Inter, Poppins, Montserrat, Roboto, Lato, Open Sans, Playfair Display, Merriweather). Set the **text size + weight**, and the headline has a full set of its own controls: **font** (override the base), **size**, **weight**, optional **custom color**, **line height**, **letter spacing**, **letter case** (uppercase / lowercase / capitalize), **italic**, **alignment**, and **space below**. Google Fonts load automatically on the front end.
+### Body & button
+
+The **base font** — Theme default (your site's font, no extra request) or a Google Font (Inter, Poppins, Montserrat, Roboto, Lato, Open Sans, Playfair Display, Merriweather) — plus the text color, size, weight, and alignment (left / center / right), and the button's color + text color. Google Fonts load automatically on the front end.
+
+### Popup box
+
+Background color, **background image** (with an optional **overlay tint** for legibility), max width, **minimum height**, inner padding, **vertical alignment** (top / center / bottom — needs a minimum height or background image to have room), and the **border** (width / style / color / radius, or an advanced CSS override).
+
+### Backdrop
+
+The dark screen behind the popup: its **opacity**, and the **gap** between the popup and the screen edges.
+
+All of the above use a native color picker where relevant and update live in the preview.
 
 ### Triggers
 
@@ -61,17 +73,16 @@ Enable any combination. The popup appears as soon as the **first** enabled trigg
 - **Max shows per session** — how many times the popup can appear in a single browser session. Resets when the tab closes.
 - **Cooldown after dismissal (days)** — once dismissed, the popup is suppressed for this many days. Stored in `localStorage`, so it persists across sessions. Set to `0` to disable the cooldown.
 
+### Close button
+
+Style the X button: size, distance from the corner (negative values place it outside the popup), background, icon color, and border radius.
+
 ### Behavior
 
-- **Close on click outside** — clicking the dark overlay dismisses the popup (and starts the cooldown).
+- **Close on click outside** — clicking the dark backdrop dismisses the popup (and starts the cooldown).
 - **Close on ESC key** — pressing ESC dismisses.
-- **Overlay opacity** — the dark backdrop behind the popup, 0 (transparent) to 1 (opaque black).
-- **Overlay padding** — inset the popup from the viewport edges.
-- **Popup border / border radius** — an optional border and rounded corners around the whole popup.
 
-### Close icon
-
-Style the X button: size, distance from the corner, background, icon color, and border radius.
+(Backdrop opacity/edge gap live in **Backdrop**; the popup border lives in **Popup box**.)
 
 ### Test mode
 
