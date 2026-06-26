@@ -99,7 +99,7 @@ class AQM_Popup_Display {
         return (int) $design['content_image_id'] > 0
             || (int) $design['style_bg_image_id'] > 0
             || '' !== trim( (string) $design['content_heading'] )
-            || '' !== trim( (string) $design['content_body'] )
+            || '' !== trim( wp_strip_all_tags( (string) $design['content_body'] ) )
             || ( '' !== trim( (string) $design['content_button_label'] ) && '' !== trim( (string) $design['content_button_url'] ) );
     }
 
@@ -296,6 +296,22 @@ class AQM_Popup_Display {
         $inline_rules[] = sprintf( '#aqm-popup-content .aqm-popup-built__text{font-size:%1$dpx;font-weight:%2$d}', $b_size, $b_weight );
         $inline_rules[] = sprintf( '#aqm-popup-content .aqm-popup-built__btn{background:%1$s;color:%2$s}', $btn_bg, $btn_text );
 
+        // Mobile: scale the headline + text down, cap padding, and pull an
+        // outside (negative-offset) close button back inside so it can't be
+        // clipped off-screen. These same-specificity rules come last, so they
+        // win when the viewport is narrow.
+        $h_size_m   = min( $h_size, max( 20, (int) round( $h_size * 0.72 ) ) );
+        $b_size_m   = min( $b_size, max( 14, (int) round( $b_size * 0.9 ) ) );
+        $padding_m  = min( $padding, 24 );
+        $mobile     = array();
+        $mobile[]   = sprintf( '#aqm-popup-content .aqm-popup-built__heading{font-size:%dpx}', $h_size_m );
+        $mobile[]   = sprintf( '#aqm-popup-content .aqm-popup-built__text{font-size:%dpx}', $b_size_m );
+        $mobile[]   = sprintf( '#aqm-popup-content .aqm-popup-built__body{padding:%dpx}', $padding_m );
+        if ( $close_offset < 0 ) {
+            $mobile[] = '#aqm-popup-close{top:8px;right:8px}';
+        }
+        $inline_rules[] = '@media (max-width:600px){' . implode( '', $mobile ) . '}';
+
         echo '<style id="aqm-popup-inline-style">' . implode( '', $inline_rules ) . '</style>'; // phpcs:ignore WordPress.Security.EscapeOutput -- values are validated hex/ints/enums + esc_url'd image URL + registry font stacks.
         ?>
         <div id="aqm-popup-overlay" class="aqm-popup-overlay" hidden role="dialog" aria-modal="true" aria-label="<?php esc_attr_e( 'Popup', 'aqm-popup' ); ?>" style="<?php echo esc_attr( $style_overlay ); ?>">
@@ -342,8 +358,8 @@ class AQM_Popup_Display {
         if ( '' !== $heading ) {
             $inner .= '<h2 class="aqm-popup-built__heading">' . esc_html( $heading ) . '</h2>';
         }
-        if ( '' !== $body ) {
-            $inner .= '<p class="aqm-popup-built__text">' . nl2br( esc_html( $body ) ) . '</p>';
+        if ( '' !== trim( wp_strip_all_tags( $body ) ) ) {
+            $inner .= '<div class="aqm-popup-built__text">' . wp_kses_post( wpautop( $body ) ) . '</div>';
         }
         if ( '' !== $label && '' !== $url ) {
             $target = $new_tab ? ' target="_blank" rel="noopener noreferrer"' : '';

@@ -25,6 +25,9 @@
     };
     var FONTS = (window.aqmPopupUi && window.aqmPopupUi.fonts) || {};
     var FONT_URLS = (window.aqmPopupUi && window.aqmPopupUi.fontUrls) || {};
+    // Captured early (before any DOM reorg) so re-initializing the rich-text
+    // editor can't lose the body content.
+    var _savedRichBody = null;
 
     // Lazy-load a Google Font into the admin page the first time it's picked, so
     // the live preview reflects font changes immediately (no save/reload needed).
@@ -52,6 +55,12 @@
     ready(function () {
         var root = document.querySelector('[data-aqm-ui]');
         if (!root) { return; }
+
+        // Capture the rich-text body now, before buildSections moves the DOM.
+        try {
+            var _b0 = document.getElementById('aqm_popup_content_body');
+            if (_b0) { _savedRichBody = _b0.value; }
+        } catch (e) { /* noop */ }
 
         var animate = hasGSAP() && !reduceMotion();
 
@@ -81,6 +90,12 @@
             try { window.gsap.set('[data-aqm-reveal]', { opacity: 1, clearProps: 'transform' }); }
             catch (e2) { /* noop */ }
         }
+
+        // Re-init the rich-text editor once everything (incl. wp.editor) has
+        // loaded — buildSections may have moved its container on DOM-ready.
+        window.addEventListener('load', function () {
+            try { initRichEditor(); } catch (e) { /* noop */ }
+        });
     });
 
     /* ----------------------------------------------------------------
@@ -274,6 +289,15 @@
         }
         function clamp(n, lo, hi) { return Math.min(hi, Math.max(lo, n)); }
 
+        // Rich-text body: prefer the live TinyMCE content, fall back to the
+        // textarea (Text/HTML mode, or before the editor initializes).
+        function bodyHtml() {
+            var ed = window.tinymce && window.tinymce.get('aqm_popup_content_body');
+            if (ed && !ed.isHidden()) { return ed.getContent(); }
+            var ta = field('content_body');
+            return ta ? ta.value : '';
+        }
+
         function apply() {
             // ---- backdrop + container chrome ----
             var opacity = clamp(num('overlay_opacity', 0.7), 0, 1);
@@ -389,9 +413,9 @@
                 pvHeading.style.marginBottom = (clamp(num('style_heading_margin_bottom', 10), 0, 80) * 0.5) + 'px';
             }
             if (pvText) {
-                var body = str('content_body', '');
-                pvText.textContent = body;
-                pvText.hidden = body === '';
+                var html = bodyHtml();
+                pvText.innerHTML = html;
+                pvText.hidden = html.replace(/<[^>]*>/g, '').trim() === '';
                 pvText.style.fontSize = Math.max(10, clamp(num('style_body_size', 16), 10, 48) * 0.62) + 'px';
                 pvText.style.fontWeight = String(num('style_body_weight', 400));
             }
@@ -444,8 +468,44 @@
         form.addEventListener('change', function () { apply(); pulse(); });
         if (replay) { replay.addEventListener('click', playOpen); }
 
+        // Exposed so the rich-text editor's change events can refresh the preview.
+        window.aqmPopupApplyPreview = apply;
+
         // Open animation once on load.
         if (animate) { window.setTimeout(playOpen, 260); }
+    }
+
+    /* ----------------------------------------------------------------
+     * Rich-text editor: re-initialize after the section reorg so its
+     * TinyMCE iframe isn't left blank by the DOM move, and push changes
+     * into the live preview.
+     * ---------------------------------------------------------------- */
+    function initRichEditor() {
+        var ID = 'aqm_popup_content_body';
+        if (!window.wp || !wp.editor || !wp.editor.initialize) { return; }
+
+        function bind() {
+            if (!window.tinymce) { return; }
+            var ed = window.tinymce.get(ID);
+            if (!ed) { return; }
+            ed.on('input keyup change NodeChange ExecCommand SetContent Undo Redo', function () {
+                if (typeof window.aqmPopupApplyPreview === 'function') { window.aqmPopupApplyPreview(); }
+            });
+        }
+
+        var ta = document.getElementById(ID);
+        var saved = (_savedRichBody !== null) ? _savedRichBody : (ta ? ta.value : '');
+        try { wp.editor.remove(ID); } catch (e) { /* not yet initialized */ }
+        // remove() can sync a blanked TinyMCE iframe back to the textarea — put
+        // the real content back before re-initializing so it's never lost.
+        if (ta) { ta.value = saved; }
+        wp.editor.initialize(ID, {
+            tinymce: { toolbar1: 'bold,italic,underline,bullist,numlist,link,unlink,removeformat', menubar: false, statusbar: false },
+            quicktags: true,
+            mediaButtons: false
+        });
+        bind();
+        if (typeof window.aqmPopupApplyPreview === 'function') { window.aqmPopupApplyPreview(); }
     }
 
     /* ----------------------------------------------------------------

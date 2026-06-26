@@ -414,6 +414,11 @@
 .aqm-image-field__remove[hidden] { display: none; }
 .aqm-image-field .description { margin-top: 8px; }
 
+/* Rich-text editor */
+.aqm-richtext { max-width: 560px; }
+.aqm-richtext .wp-editor-wrap { border: 1px solid var(--aqm-line); border-radius: 8px; overflow: hidden; }
+.aqm-richtext .wp-editor-tabs { padding-top: 6px; }
+
 /* Date input */
 .aqm-ui .aqm-date-input {
     min-height: 36px;
@@ -721,8 +726,13 @@
     margin: 0 0 10px;
     font-size: 11.5px;
     line-height: 1.45;
-    white-space: pre-line;
+    overflow-wrap: break-word;
 }
+.aqm-preview__text > :first-child { margin-top: 0; }
+.aqm-preview__text > :last-child { margin-bottom: 0; }
+.aqm-preview__text p { margin: 0 0 0.6em; }
+.aqm-preview__text ul,
+.aqm-preview__text ol { margin: 0 0 0.6em; padding-left: 1.3em; text-align: left; }
 .aqm-preview__body > :last-child { margin-bottom: 0; }
 .aqm-preview__btn {
     display: inline-block;

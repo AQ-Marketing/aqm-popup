@@ -34,7 +34,7 @@ WP Admin → **AQM Popup**. The page has a **Designs** manager, a per-design edi
 |---|---|
 | **Image** | Choose an image from the Media Library. Sits flush at the top of the popup. Optional. |
 | **Headline** | Bold title at the top of the text. Optional. |
-| **Text** | A short paragraph. Line breaks are preserved. Optional. |
+| **Text** | A rich-text paragraph (bold, italic, links, lists). Optional. |
 | **Button label / link** | A call-to-action button. Both a label and a link are required for the button to show. Optionally open the link in a new tab. |
 
 Any field left empty is skipped — an image-only, text-only, or background-image-only popup all work.

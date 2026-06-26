@@ -95,13 +95,25 @@
     font-size: clamp(20px, 4vw, 28px);
     line-height: 1.2;
     font-weight: 700;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
 }
 
 .aqm-popup-built__text {
     margin: 0 0 18px;
     font-size: 16px;
     line-height: 1.55;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
 }
+
+/* Rich-text body: tidy the margins of the editor's paragraphs/lists. */
+.aqm-popup-built__text > :first-child { margin-top: 0; }
+.aqm-popup-built__text > :last-child { margin-bottom: 0; }
+.aqm-popup-built__text p { margin: 0 0 0.75em; }
+.aqm-popup-built__text ul,
+.aqm-popup-built__text ol { margin: 0 0 0.75em; padding-left: 1.4em; text-align: left; }
+.aqm-popup-built__text a { text-decoration: underline; }
 
 .aqm-popup-built__body > :last-child {
     margin-bottom: 0;

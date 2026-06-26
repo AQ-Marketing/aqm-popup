@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.3.0 — 2026-06-26
+
+- **Rich text for the popup body.** The Content "Text" field is now a full WordPress editor (bold, italic, underline, links, bullet/numbered lists) instead of a plain box. Existing plain-text bodies keep working (line breaks are preserved via auto-paragraphs). Output is sanitized with `wp_kses_post` on save and on render.
+- **Mobile fit.** The popup no longer gets cut off on small screens:
+  - The **headline and text scale down** on narrow viewports (and long words wrap instead of overflowing).
+  - A close button placed **outside** the popup (negative distance) is automatically pulled back inside on phones so it can't be clipped off-screen.
+  - Inner padding is capped on mobile so content isn't cramped. (Width was already capped to the viewport, and tall popups scroll inside.)
+
 ## 1.2.6 — 2026-06-26
 
 - **Fixed: Popup box border not applying.** If the legacy "Border (advanced CSS)" field had a leftover value, it overrode the structured Border width/style/color and could render nothing. The structured border now takes precedence whenever its width is greater than 0; the advanced field is only used as a fallback when width is 0. (Reminder: a border needs a width above 0 to show.)

@@ -194,7 +194,7 @@ class AQM_Popup_Admin {
         add_settings_section( 'aqm_popup_content', __( 'Content', 'aqm-popup' ), array( $this, 'section_content_text' ), self::PAGE_SLUG );
         add_settings_field( 'content_image_id',       __( 'Image', 'aqm-popup' ),               array( $this, 'field_image' ),    self::PAGE_SLUG, 'aqm_popup_content', array( 'key' => 'content_image_id' ) );
         add_settings_field( 'content_heading',        __( 'Headline', 'aqm-popup' ),            array( $this, 'field_text' ),     self::PAGE_SLUG, 'aqm_popup_content', array( 'key' => 'content_heading', 'placeholder' => __( 'e.g. Spring sale — 20% off', 'aqm-popup' ), 'description' => __( 'Style this in the Headline section below.', 'aqm-popup' ) ) );
-        add_settings_field( 'content_body',           __( 'Text', 'aqm-popup' ),                array( $this, 'field_textarea' ), self::PAGE_SLUG, 'aqm_popup_content', array( 'key' => 'content_body', 'description' => __( 'A short paragraph. Line breaks are preserved. Style it in the Body & button section.', 'aqm-popup' ) ) );
+        add_settings_field( 'content_body',           __( 'Text', 'aqm-popup' ),                array( $this, 'field_richtext' ), self::PAGE_SLUG, 'aqm_popup_content', array( 'key' => 'content_body', 'description' => __( 'Rich text — bold, italic, links, and lists. Size, weight, color, and font are set in the Body & button section.', 'aqm-popup' ) ) );
         add_settings_field( 'content_button_label',   __( 'Button label', 'aqm-popup' ),        array( $this, 'field_text' ),     self::PAGE_SLUG, 'aqm_popup_content', array( 'key' => 'content_button_label', 'placeholder' => __( 'e.g. Shop now', 'aqm-popup' ), 'description' => __( 'Leave empty to hide the button.', 'aqm-popup' ) ) );
         add_settings_field( 'content_button_url',     __( 'Button link', 'aqm-popup' ),         array( $this, 'field_text' ),     self::PAGE_SLUG, 'aqm_popup_content', array( 'key' => 'content_button_url', 'placeholder' => 'https://', 'input_type' => 'url' ) );
         add_settings_field( 'content_button_new_tab', __( 'Open link in new tab', 'aqm-popup' ), array( $this, 'field_checkbox' ), self::PAGE_SLUG, 'aqm_popup_content', array( 'key' => 'content_button_new_tab' ) );
@@ -375,6 +375,32 @@ class AQM_Popup_Admin {
         );
         if ( ! empty( $args['description'] ) ) {
             echo '<p class="description">' . esc_html( $args['description'] ) . '</p>';
+        }
+    }
+
+    public function field_richtext( $args ) {
+        $key   = isset( $args['key'] ) ? $args['key'] : 'content_body';
+        $value = (string) $this->fval( $key, false );
+        echo '<div class="aqm-richtext">';
+        wp_editor(
+            $value,
+            'aqm_popup_content_body',
+            array(
+                'textarea_name' => $this->fname( $key, false ),
+                'textarea_rows' => 6,
+                'media_buttons' => false,
+                'teeny'         => false,
+                'tinymce'       => array(
+                    'toolbar1'  => 'bold,italic,underline,bullist,numlist,link,unlink,removeformat',
+                    'menubar'   => false,
+                    'statusbar' => false,
+                ),
+                'quicktags'     => array( 'buttons' => 'strong,em,link,ul,ol,li,close' ),
+            )
+        );
+        echo '</div>';
+        if ( ! empty( $args['description'] ) ) {
+            echo '<p class="description">' . wp_kses_post( $args['description'] ) . '</p>';
         }
     }
 
@@ -597,7 +623,7 @@ class AQM_Popup_Admin {
         // Content.
         $out['content_image_id']       = isset( $in['content_image_id'] ) ? max( 0, (int) $in['content_image_id'] ) : 0;
         $out['content_heading']        = isset( $in['content_heading'] ) ? sanitize_text_field( $in['content_heading'] ) : '';
-        $out['content_body']           = isset( $in['content_body'] ) ? sanitize_textarea_field( $in['content_body'] ) : '';
+        $out['content_body']           = isset( $in['content_body'] ) ? wp_kses_post( (string) $in['content_body'] ) : '';
         $out['content_button_label']   = isset( $in['content_button_label'] ) ? sanitize_text_field( $in['content_button_label'] ) : '';
         $out['content_button_url']     = isset( $in['content_button_url'] ) ? esc_url_raw( trim( (string) $in['content_button_url'] ) ) : '';
         $out['content_button_new_tab'] = ! empty( $in['content_button_new_tab'] );
@@ -982,7 +1008,7 @@ class AQM_Popup_Admin {
                                             <img class="aqm-preview__img" data-aqm-preview-img alt="" hidden />
                                             <div class="aqm-preview__body" data-aqm-preview-body>
                                                 <h3 class="aqm-preview__heading" data-aqm-preview-heading></h3>
-                                                <p class="aqm-preview__text" data-aqm-preview-text></p>
+                                                <div class="aqm-preview__text" data-aqm-preview-text></div>
                                                 <span class="aqm-preview__btn" data-aqm-preview-btn hidden></span>
                                             </div>
                                         </div>
